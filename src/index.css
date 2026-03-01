@@ -473,16 +473,16 @@ input, select { font: inherit; }
   }
 
   .weekCell { min-height: 64px; }
-  .cell { min-height: 64px; padding: 8px 5px; }
+  .cell { min-height: 64px; padding: 8px 4px; }
   .cell.date .dayNum { left: 6px; }  /* 8px → 6px（見た目のバランス用） */
 
   .dayNum { margin-bottom: 4px; }
 
   /* ★予定は必ず1行省略 */
   .miniItem {
-    font-size: 9px;
-    line-height: 1.1;
-    letter-spacing: -0.02em; /* ほんの少しだけ詰める */
+    font-size: 8.8px;
+    line-height: 1.05;
+    letter-spacing: -0.03em; /* ほんの少しだけ詰める */
   }
 
   .chips { grid-template-columns: repeat(3, 1fr); }
