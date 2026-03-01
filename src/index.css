@@ -468,7 +468,7 @@ input, select { font: inherit; }
 
   /* ★スマホは列をさらに縮める（週列も含めて必ず収める） */
   .dowRow, .grid {
-    grid-template-columns: 30px repeat(7, minmax(0, 1fr));
+    grid-template-columns: 25px repeat(7, minmax(0, 1fr));
     gap: 5px;
   }
 
