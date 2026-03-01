@@ -481,7 +481,7 @@ input, select { font: inherit; }
   /* ★予定は必ず1行省略 */
   .miniItem {
     font-size: 8.0px;
-    line-height: 1.05;
+    line-height: 1.00;
     letter-spacing: -0.03em; /* ほんの少しだけ詰める */
   }
 
