@@ -468,12 +468,12 @@ input, select { font: inherit; }
 
   /* ★スマホは列をさらに縮める（週列も含めて必ず収める） */
   .dowRow, .grid {
-    grid-template-columns: 34px repeat(7, minmax(0, 1fr));
-    gap: 6px;
+    grid-template-columns: 30px repeat(7, minmax(0, 1fr));
+    gap: 5px;
   }
 
   .weekCell { min-height: 64px; }
-  .cell { min-height: 64px; padding: 8px 4px; }
+  .cell { min-height: 64px; padding: 8px 3px; }
   .cell.date .dayNum { left: 6px; }  /* 8px → 6px（見た目のバランス用） */
 
   .dayNum { margin-bottom: 4px; }
@@ -482,7 +482,7 @@ input, select { font: inherit; }
   .miniItem {
     font-size: 8.0px;
     line-height: 1.00;
-    letter-spacing: -0.03em; /* ほんの少しだけ詰める */
+    letter-spacing: -0.07em; /* ほんの少しだけ詰める */
   }
 
   .chips { grid-template-columns: repeat(3, 1fr); }
