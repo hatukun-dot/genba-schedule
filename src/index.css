@@ -1,0 +1,567 @@
+:root {
+  /* Light theme */
+  --bg: #f2f2f2;
+  --panel: #ffffff;
+  --panel2: #fafafa;
+  --text: #111111;
+  --muted: rgba(0,0,0,.55);
+  --line: rgba(0, 0, 0, 0.10);
+
+  --sat: #e3f2fd; /* 土：水色 */
+  --sun: #fce4ec; /* 日：ピンク */
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+button { font: inherit; }
+input, select { font: inherit; }
+
+.app {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 16px 80px;
+}
+
+.header { text-align: center; }
+.title { font-size: 44px; margin: 12px 0 18px; }
+
+.monthBar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.monthLabel { font-size: 22px; font-weight: 800; }
+
+.btn {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn.primary {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+  font-weight: 900;
+}
+
+.main { display: flex; justify-content: center; }
+
+.calendarCard {
+  width: min(720px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.08);
+}
+
+/* ▼ 曜日行：左に「週」列を足して 8列 */
+.dowRow {
+  display: grid;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.dowCell {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 900;
+  padding: 6px 0;
+}
+
+/* ▼ カレンダー本体：左に「週」列を足して 8列 */
+.grid {
+  display: grid;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
+  gap: 8px;
+}
+
+/* 週ボタンセル */
+.weekCell {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  min-height: 74px;
+  padding: 10px 6px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+  display: grid;
+  place-items: center;
+
+  min-width: 0; /* ← ここ重要 */
+  overflow: hidden;
+}
+.weekCell span {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .9;
+}
+.weekCell:active { transform: translateY(1px); }
+
+/* 日付セル */
+.cell {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel2);
+  min-height: 74px;
+  padding: 10px 8px;
+  color: var(--text);
+
+  min-width: 0; /* ← ここ重要（スマホでのはみ出し防止） */
+}
+
+.cell.date{
+  position: relative;
+  padding-top: 28px;
+}
+
+.cell.date .dayNum{
+  position: absolute;
+  top: 10px;
+  left: 8px;
+  margin: 0;
+  line-height: 1;
+}
+
+.cell.date .miniList{
+  margin-top: 0;
+}
+
+.cell.date .more{
+  margin-top: 2px;
+}
+
+.cell.blank {
+  opacity: 0.35;
+  background: transparent;
+}
+
+.cell.date {
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+
+  overflow: hidden; /* ← ここ重要（中身を枠内に閉じ込める） */
+}
+
+.cell.date.today {
+  outline: 2px solid rgba(0,0,0,.20);
+}
+
+.cell.date.sat {
+  background:
+    linear-gradient(0deg, rgba(227,242,253,.55), rgba(227,242,253,.55)),
+    var(--panel2);
+}
+.cell.date.sun {
+  background:
+    linear-gradient(0deg, rgba(252,228,236,.55), rgba(252,228,236,.55)),
+    var(--panel2);
+}
+
+.dayNum { font-weight: 900; margin-bottom: 6px; }
+
+.miniList {
+  display: grid;
+  gap: 2px;
+
+  min-width: 0;
+  text-align: left; /* ← 予定左揃え */
+}
+
+.miniItem {
+  font-size: 11px;
+  line-height: 1.25;
+
+  text-align: left;  /* ← 予定左揃え */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  min-width: 0;
+  max-width: 100%;
+}
+
+.more { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* 未定(TBD) */
+.tbdRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.tbdCell {
+  width: calc(((100% - 7 * 8px - 46px) / 7) * 3 + 8px * 2);
+  min-height: 74px;
+  border-radius: 14px;
+  border: 1px dashed rgba(0,0,0,.25);
+  background: rgba(0,0,0,.03);
+  color: var(--text);
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: left;
+
+  min-width: 0;
+  overflow: hidden; /* ← ここ重要 */
+}
+.tbdTitle { font-weight: 900; margin-bottom: 6px; }
+
+/* --- モーダル --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 0;
+  z-index: 999;
+}
+
+.modal {
+  width: min(820px, 100%);
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+}
+
+.modalHeader {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.modalTitle { text-align: center; font-weight: 900; }
+
+.modalBody {
+  padding: 12px 12px 100px;
+  overflow: auto;
+}
+
+.sectionTitle {
+  margin: 14px 0 10px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.empty { color: var(--muted); padding: 14px 0; }
+
+/* --- リスト --- */
+.eventList { display: grid; gap: 10px; }
+.eventRow {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 10px;
+  position: relative;
+  background: rgba(0,0,0,.02);
+
+  overflow: visible;
+}
+.eventMain { font-weight: 900; }
+.eventSub { margin-top: 6px; color: var(--muted); font-size: 13px; }
+
+/* 三点アクション */
+.eventActions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+}
+
+/* 三点ボタン */
+.dots {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+/* メニュー */
+.menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+  min-width: 140px;
+  z-index: 10000;
+  box-shadow: 0 10px 22px rgba(0,0,0,.10);
+}
+
+.menuBtn {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  padding: 8px 10px;
+  cursor: pointer;
+  text-align: left;
+}
+.menuBtn:disabled { opacity: .45; cursor: not-allowed; }
+.sep { height: 1px; background: var(--line); margin: 2px 0; }
+
+/* --- フォーム --- */
+.form { display: grid; gap: 14px; }
+.field { display: grid; gap: 8px; }
+.label { color: var(--muted); font-weight: 800; }
+
+.input, .select {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+}
+
+.chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+
+  max-height: 120px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+
+  position: relative;
+  pointer-events: auto;
+}
+
+.chip {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text);
+  padding: 8px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  min-width: 0;
+}
+.chip.active { outline: 2px solid rgba(0,0,0,.18); }
+
+.counterRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.counterValue {
+  min-width: 92px;
+  text-align: center;
+  font-weight: 900;
+}
+
+.peopleBox {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  max-height: 220px;
+  overflow: auto;
+
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)); /* ← 2列 */
+  gap: 8px 10px;
+}
+
+.personRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text);
+
+  min-width: 0;              /* ← 折り返し/はみ出し対策 */
+  overflow: hidden;
+}
+.personRow span{
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;   /* 長い名前は… */
+  white-space: nowrap;
+}
+
+.addPersonRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+/* 色選択（○10個 5×2） */
+.colorGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+.colorDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.12);
+  cursor: pointer;
+}
+.colorDot.active {
+  border-color: rgba(0,0,0,.65);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.08);
+}
+
+/* 下部固定 */
+.modalFooter {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  background: linear-gradient(180deg, rgba(242,242,242,0), rgba(242,242,242,.95));
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
+/* --- スマホ最適化：はみ出し防止を強める --- */
+@media (max-width: 520px) {
+  .title { font-size: 34px; }
+
+  .app { padding: 16px 12px 80px; }
+
+  .calendarCard {
+    width: 100%;
+    padding: 10px;
+  }
+
+  /* ★スマホは列をさらに縮める（週列も含めて必ず収める） */
+  .dowRow, .grid {
+    grid-template-columns: 34px repeat(7, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .weekCell { min-height: 64px; }
+  .cell { min-height: 64px; padding: 8px 6px; }
+
+  .dayNum { margin-bottom: 4px; }
+
+  /* ★予定は必ず1行省略 */
+  .miniItem {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .chips { grid-template-columns: repeat(3, 1fr); }
+
+  .tbdCell {
+  width: calc(((100% - 7 * 6px - 34px) / 7) * 3 + 6px * 2);
+}
+}
+/* 月ヘッダー上段：タイトル左、…右 */
+.headerTopRow{
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
+}
+
+.headerTopRow .title{
+  grid-column: 2;
+  justify-self: center;
+  margin: 0; /* h1のデフォルト余白でズレるの防止 */
+}
+
+.monthHeaderMenu{
+  grid-column: 3;
+  justify-self: end;
+  position: relative; /* メニューの絶対配置の基準 */
+  display:flex;
+  align-items:center;
+}
+/* 週表示：ヘッダ（曜日 yyyy-mm-dd）を大きく＆太く */
+.modalBody .eventRow.weekRow .eventMain.weekHead .weekHeadText{
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+/* 週表示：本文（予定）を右にずらして境目を分かりやすく */
+.modalBody .eventRow.weekRow .weekBody{
+  margin-left: 14px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(0,0,0,.10);
+  background: transparent; /* 土日色は載せない */
+}
+
+/* 土日：カード全体を色（ヘッダ＋予定欄まとめて） */
+.modalBody .eventRow.weekRow.sat{
+  background: var(--sat);
+}
+.modalBody .eventRow.weekRow.sun{
+  background: var(--sun);
+}
+
+/* 文字色（必要なら：土日だけ色を合わせる） */
+.modalBody .eventRow.weekRow.sat .weekHeadText{ color:#0b57d0; }
+.modalBody .eventRow.weekRow.sun .weekHeadText{ color:#b00020; }
+
+/* 予定側を「透明」にして大枠色を見せる（すでに書いててもOK） */
+.modalBody .eventRow.weekRow .weekBody{
+  background: transparent;
+}
+
+/* スマホ時の文字サイズ・左余白（あなたの既存設定を維持） */
+@media (max-width: 520px){
+  .modalBody .eventRow.weekRow .weekHeadText{ font-size: 16px; }
+  .modalBody .eventRow.weekRow .weekBody{ margin-left: 10px; padding-left: 10px; }
+}
+/* 複数日/移動のカレンダー：土日マスに色 */
+.modalBody .satDay,
+.modalBody .sunDay {
+  border-radius: 12px;
+}
+
+.modalBody .satDay {
+  background: var(--sat);
+}
+
+.modalBody .sunDay {
+  background: var(--sun);
+}
+
+/* 文字色も合わせたいなら */
+.modalBody .satDay { color: #0b57d0; }
+.modalBody .sunDay { color: #b00020; }
