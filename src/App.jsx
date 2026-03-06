@@ -1,57 +1,20 @@
-import React, { useEffect, useMemo, useRef, useState, createContext, useContext } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { db, seedIfNeeded, COLOR_PALETTE } from "./db";
-import { supabase } from "./supabase";
-
-function pad2(n) {
-  return String(n).padStart(2, "0");
-}
-function toYmd(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-}
-function fromYmd(ymd) {
-  const [y, m, d] = ymd.split("-").map((x) => parseInt(x, 10));
-  return new Date(y, m - 1, d);
-}
-function addDaysYmd(ymd, delta) {
-  const d = fromYmd(ymd);
-  d.setDate(d.getDate() + delta);
-  return toYmd(d);
-}
-function clamp(n, min, max) {
-  return Math.max(min, Math.min(max, n));
-}
-function norm(s) {
-  return (s ?? "").trim();
-}
-function sameDay(a, b) {
-  return a && b && a === b;
-}
-
-// ID正規化（Supabase/Dexie/フォーム混在の型ズレ潰し）
-function toIntOrNull(v) {
-  if (v === null || v === undefined) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
-}
-function toInt(v) {
-  const n = Number(v);
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
-}
-function uniqNumArray(arr) {
-  const out = [];
-  const seen = new Set();
-  for (const v of Array.isArray(arr) ? arr : []) {
-    const n = toInt(v);
-    if (n === null) continue;
-    if (seen.has(n)) continue;
-    seen.add(n);
-    out.push(n);
-  }
-  return out;
-}
+import { AuthGate, useAuth } from "./components/auth/AuthGate";
+import { WeekModal } from "./components/modals/WeekModal";
+import { MasterModal } from "./components/modals/MasterModal";
+import { DayModal } from "./components/modals/DayModal";
+import { MoveModal } from "./components/modals/MoveModal";
+import { MultiAddModal } from "./components/modals/MultiAddModal";
+import { MonthHeader } from "./components/month/MonthHeader";
+import { MonthGrid } from "./components/month/MonthGrid";
+import { TbdRow } from "./components/month/TbdRow";
+import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
+import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
+import { uniqueSheetName } from "./utils/excel";
+import { normalizeEventRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
+import * as api from "./services/api";
 
 // 「休み」「応援」の優先順位（表示用）
 function pinRank(genbaName) {
@@ -59,254 +22,7 @@ function pinRank(genbaName) {
   if (genbaName === "応援") return 1;
   return 2;
 }
-
-// people_count NOT NULL 対策（DBは0で保存、UIはnullとして扱う）
-function toDbPeopleCount(appCount) {
-  if (appCount === null || appCount === undefined) return 0;
-  const n = Number(appCount);
-  if (!Number.isFinite(n)) return 0;
-  return clamp(n, 0, 99);
-}
-function fromDbPeopleCount(dbCount) {
-  const n = Number(dbCount);
-  if (!Number.isFinite(n)) return null;
-  if (n === 0) return null;
-  return n;
-}
-
-// 月曜始まりの 6週(42セル)カレンダー
-function buildMonthGrid(year, monthIndex0, opts = {}) {
-  const fillOutside = Boolean(opts.fillOutside);
-
-  const first = new Date(year, monthIndex0, 1);
-  const firstDow = first.getDay(); // 0(日)1(月)...
-  const offset = (firstDow + 6) % 7; // 月=0 ... 日=6
-
-  const gridStart = new Date(year, monthIndex0, 1 - offset);
-
-  const cells = [];
-  for (let i = 0; i < 42; i++) {
-    const date = new Date(gridStart);
-    date.setDate(gridStart.getDate() + i);
-
-    const inMonth = date.getFullYear() === year && date.getMonth() === monthIndex0;
-    if (!inMonth && !fillOutside) {
-      cells.push({ type: "blank", key: `b-${year}-${monthIndex0}-${i}` });
-    } else {
-      cells.push({
-        type: "date",
-        date,
-        ymd: toYmd(date),
-        key: toYmd(date),
-        inMonth,
-      });
-    }
-  }
-
-  return { cells, gridStart };
-}
-
-function mondayOfYmd(ymd) {
-  const d = fromYmd(ymd);
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  return toYmd(monday);
-}
-
-// Excelのシート名制約
-function sanitizeSheetName(name) {
-  const n = String(name ?? "").trim() || "（無名）";
-  const cleaned = n.replace(/[\\/?*\[\]:]/g, " ").replace(/\s+/g, " ").trim();
-  return cleaned.slice(0, 31) || "（無名）";
-}
-function uniqueSheetName(desired, usedSet) {
-  let base = sanitizeSheetName(desired);
-  let name = base;
-  let i = 2;
-  while (usedSet.has(name)) {
-    const suffix = `(${i})`;
-    name = (base.slice(0, Math.max(0, 31 - suffix.length)) + suffix).slice(0, 31);
-    i++;
-  }
-  usedSet.add(name);
-  return name;
-}
-
-/** Supabase row -> App shape（camelCaseに正規化） */
-function normalizeProjectRow(r) {
-  return {
-    ...r,
-    id: toIntOrNull(r.id),
-    name: r.name,
-    createdAt: r.created_at ?? r.createdAt ?? null,
-    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
-  };
-}
-function normalizeTaskRow(r) {
-  return {
-    ...r,
-    id: toIntOrNull(r.id),
-    name: r.name,
-    createdAt: r.created_at ?? r.createdAt ?? null,
-    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
-  };
-}
-function normalizePeopleRow(r) {
-  return {
-    ...r,
-    id: toIntOrNull(r.id),
-    name: r.name,
-    createdAt: r.created_at ?? r.createdAt ?? null,
-    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
-  };
-}
-function normalizeEventRow(r) {
-  return {
-    ...r,
-    id: toIntOrNull(r.id),
-    date: r.date ?? null,
-    bucket: r.bucket ?? null,
-    projectId: toIntOrNull(r.project_id ?? r.projectId ?? null),
-    taskId: toIntOrNull(r.task_id ?? r.taskId ?? null),
-    note: r.note ?? null,
-    peopleCount: fromDbPeopleCount(r.people_count ?? r.peopleCount ?? null),
-    peopleIds: uniqNumArray(r.people_ids ?? r.peopleIds ?? []),
-    color: r.color ?? null,
-    order: r.order ?? 0,
-    createdAt: r.created_at ?? r.createdAt ?? null,
-    updatedAt: r.updated_at ?? r.updatedAt ?? null,
-    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
-  };
-}
-
 // ============================================================
-// Auth（共有アカウント前提）
-// ============================================================
-
-const AuthCtx = createContext(null);
-function useAuth() {
-  return useContext(AuthCtx);
-}
-
-function AuthGate({ children }) {
-  const [ready, setReady] = useState(false);
-  const [session, setSession] = useState(null);
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-
-  useEffect(() => {
-    let unsub = null;
-
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session ?? null);
-      setReady(true);
-
-      const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-        setSession(s ?? null);
-      });
-      unsub = sub?.subscription;
-    })();
-
-    return () => {
-      try {
-        unsub?.unsubscribe?.();
-      } catch {}
-    };
-  }, []);
-
-  const signIn = async () => {
-    setErr("");
-    setBusy(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      setSession(data.session ?? null);
-    } catch (e) {
-      setErr(e?.message || String(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOut = async () => {
-    setBusy(true);
-    try {
-      await supabase.auth.signOut();
-      setSession(null);
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (!ready) {
-    return <div style={{ padding: 16, fontFamily: "sans-serif" }}>読み込み中…</div>;
-  }
-
-  if (!session) {
-    return (
-      <div style={{ padding: 16, fontFamily: "sans-serif", maxWidth: 420 }}>
-        <h3 style={{ margin: "0 0 12px" }}>共有アカウントでログイン</h3>
-
-        <div style={{ display: "grid", gap: 8 }}>
-          <input
-            placeholder="メール"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc" }}
-          />
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              placeholder="パスワード"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type={showPw ? "text" : "password"}
-              autoComplete="current-password"
-              style={{ padding: 10, borderRadius: 8, border: "1px solid #ccc", flex: 1 }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw((v) => !v)}
-              style={{
-                padding: "10px 12px",
-                borderRadius: 8,
-                border: "1px solid #ccc",
-                background: "#fff",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-              aria-label={showPw ? "パスワードを隠す" : "パスワードを表示"}
-            >
-              {showPw ? "🙈" : "👁"}
-            </button>
-          </div>
-
-          <button onClick={signIn} disabled={busy || !email || !password} style={{ padding: 10, borderRadius: 8 }}>
-            {busy ? "ログイン中…" : "ログイン"}
-          </button>
-
-          {err ? <div style={{ color: "crimson", whiteSpace: "pre-wrap" }}>{err}</div> : null}
-
-          <div style={{ fontSize: 12, color: "#666" }}>※ RLS が authenticated のため、ログインしないとデータは読めません。</div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <AuthCtx.Provider value={{ session, signOut, authBusy: busy }}>
-      {children}
-    </AuthCtx.Provider>
-  );
-}
 
 export default function App() {
   // ✅ useAuth() を App（AuthGate外）で呼ばない
@@ -339,7 +55,7 @@ function AppInner() {
 
   const year = monthCursor.getFullYear();
   const monthIndex0 = monthCursor.getMonth();
-  const monthLabel = `${year}年${monthIndex0 + 1}月`;
+  const monthLabel = ymdToMonthLabel(year, monthIndex0);
 
   // ★月画面は月外も表示＆押せる
   const { cells: gridCells, gridStart } = useMemo(() => buildMonthGrid(year, monthIndex0, { fillOutside: true }), [
@@ -598,14 +314,10 @@ function AppInner() {
   async function moveEventToYmdInstant(ymd) {
     if (!moveEventId) return;
 
-    const { error } = await supabase
-      .from("events")
-      .update({
-        date: ymd,
-        bucket: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", moveEventId);
+    const { error } = await api.updateEventById({
+      id: moveEventId,
+      patch: { date: ymd, bucket: null, updated_at: new Date().toISOString() },
+    });
 
     if (error) {
       console.error("moveEventToYmdInstant error", error);
@@ -622,14 +334,10 @@ function AppInner() {
   async function moveEventToTbdInstant() {
     if (!moveEventId) return;
 
-    const { error } = await supabase
-      .from("events")
-      .update({
-        date: "3000-01-01",
-        bucket: "TBD",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", moveEventId);
+    const { error } = await api.updateEventById({
+      id: moveEventId,
+      patch: { date: "3000-01-01", bucket: "TBD", updated_at: new Date().toISOString() },
+    });
 
     if (error) {
       console.error("moveEventToTbdInstant error", error);
@@ -750,11 +458,7 @@ function AppInner() {
   }, [reloadTick]);
 
   async function reloadMasters() {
-    const [pRes, tRes, peRes] = await Promise.all([
-      supabase.from("projects").select("*"),
-      supabase.from("tasks").select("*").order("name", { ascending: true }),
-      supabase.from("people").select("*").order("name", { ascending: true }),
-    ]);
+    const [pRes, tRes, peRes] = await Promise.all([api.fetchProjects(), api.fetchTasks(), api.fetchPeople()]);
 
     if (pRes.error) {
       console.error("projects load error", pRes.error);
@@ -802,7 +506,7 @@ function AppInner() {
   }
 
   async function reloadProjectUsage() {
-    const { data, error } = await supabase.from("events").select("project_id, deleted_at");
+    const { data, error } = await api.fetchProjectUsageRows();
     if (error) {
       console.error("projectUsage load error", error);
       pushError("現場の使用回数の取得に失敗しました", error?.message || String(error));
@@ -889,7 +593,7 @@ function AppInner() {
     const wanted = [];
 
     if (includeTbd) {
-      const { data: tbdData, error: tbdErr } = await supabase.from("events").select("*").eq("bucket", "TBD").is("deleted_at", null);
+      const { data: tbdData, error: tbdErr } = await api.fetchEventsTbd();
 
       if (tbdErr) {
         console.error("events load TBD error", tbdErr);
@@ -899,12 +603,7 @@ function AppInner() {
       }
     }
 
-    const { data: rangeData, error: rangeErr } = await supabase
-      .from("events")
-      .select("*")
-      .gte("date", minStart)
-      .lt("date", maxEndExclusive)
-      .is("deleted_at", null);
+    const { data: rangeData, error: rangeErr } = await api.fetchEventsRange({ startYmd: minStart, endYmdExclusive: maxEndExclusive });
 
     if (rangeErr) {
       console.error("events load range error", rangeErr);
@@ -1073,7 +772,7 @@ function AppInner() {
 
     const hitDeleted = projects.find((p) => p.name === name && p.deletedAt);
     if (hitDeleted) {
-      const { error } = await supabase.from("projects").update({ deleted_at: null }).eq("id", hitDeleted.id);
+      const { error } = await api.restoreProjectById(hitDeleted.id);
       if (error) {
         console.error("restore project error", error);
         pushError("現場の復元に失敗しました", error?.message || String(error));
@@ -1084,7 +783,7 @@ function AppInner() {
     }
 
     const createdAt = new Date().toISOString();
-    const { data, error } = await supabase.from("projects").insert([{ name, created_at: createdAt, deleted_at: null }]).select("*").single();
+    const { data, error } = await api.createProject({ name, createdAt });
 
     if (error) {
       console.error("create project error", error);
@@ -1105,7 +804,7 @@ function AppInner() {
 
     const hitDeleted = tasks.find((t) => t.name === name && t.deletedAt);
     if (hitDeleted) {
-      const { error } = await supabase.from("tasks").update({ deleted_at: null }).eq("id", hitDeleted.id);
+      const { error } = await api.restoreTaskById(hitDeleted.id);
       if (error) {
         console.error("restore task error", error);
         pushError("作業の復元に失敗しました", error?.message || String(error));
@@ -1116,7 +815,7 @@ function AppInner() {
     }
 
     const createdAt = new Date().toISOString();
-    const { data, error } = await supabase.from("tasks").insert([{ name, created_at: createdAt, deleted_at: null }]).select("*").single();
+    const { data, error } = await api.createTask({ name, createdAt });
 
     if (error) {
       console.error("create task error", error);
@@ -1200,7 +899,7 @@ function AppInner() {
       delete clean.id;
       delete clean.ID;
 
-      const { error } = await supabase.from("events").insert([clean]);
+      const { error } = await api.insertEvent(clean);
       if (error) {
         console.error("addEvent error", error);
         pushError("予定の追加に失敗しました", error?.message || String(error));
@@ -1264,7 +963,7 @@ function AppInner() {
         delete clean.id;
         delete clean.ID;
 
-        const { error } = await supabase.from("events").insert([clean]);
+        const { error } = await api.insertEvent(clean);
         if (error) {
           console.error("addEventToMultipleDays insert error", ymd, error);
           pushError(`複数日追加に失敗しました（${ymd}）`, error?.message || String(error));
@@ -1296,9 +995,9 @@ function AppInner() {
       const tid = await ensureTaskIdOrNull();
 
       const now = new Date().toISOString();
-      const { error } = await supabase
-        .from("events")
-        .update({
+      const { error } = await api.updateEventById({
+        id: editingEventId,
+        patch: {
           project_id: pid,
           task_id: tid,
           note: note.trim() || null,
@@ -1306,8 +1005,8 @@ function AppInner() {
           people_ids: uniqNumArray(selectedPeopleIds),
           color: color,
           updated_at: now,
-        })
-        .eq("id", editingEventId);
+        },
+      });
 
       if (error) {
         console.error("saveEditEvent error", error);
@@ -1328,7 +1027,7 @@ function AppInner() {
       clearError();
 
       const now = new Date().toISOString();
-      const { error } = await supabase.from("events").update({ deleted_at: now, updated_at: now }).eq("id", id);
+      const { error } = await api.softDeleteEventById({ id, nowIso: now });
       if (error) {
         console.error("softDeleteEvent error", error);
         pushError("削除に失敗しました", error?.message || String(error));
@@ -1346,16 +1045,10 @@ function AppInner() {
       const bOrder = Number(b.order ?? 0);
       const now = new Date().toISOString();
 
-      const r1 = await supabase.from("events").update({ order: bOrder, updated_at: now }).eq("id", a.id);
-      if (r1.error) {
-        console.error("swapOrder error(1)", r1.error);
-        pushError("並び替えに失敗しました", r1.error?.message || String(r1.error));
-        return;
-      }
-      const r2 = await supabase.from("events").update({ order: aOrder, updated_at: now }).eq("id", b.id);
-      if (r2.error) {
-        console.error("swapOrder error(2)", r2.error);
-        pushError("並び替えに失敗しました", r2.error?.message || String(r2.error));
+      const { error } = await api.swapEventOrder({ idA: a.id, orderA: aOrder, idB: b.id, orderB: bOrder, nowIso: now });
+      if (error) {
+        console.error("swapOrder error", error);
+        pushError("並び替えに失敗しました", error?.message || String(error));
         return;
       }
 
@@ -1473,7 +1166,7 @@ function AppInner() {
       if (!name) return;
 
       const createdAt = new Date().toISOString();
-      const { data, error } = await supabase.from("people").insert([{ name, created_at: createdAt, deleted_at: null }]).select("*").single();
+      const { data, error } = await api.createPerson({ name, createdAt });
 
       if (error) {
         console.error("addPersonInline error", error);
@@ -1503,10 +1196,10 @@ function AppInner() {
         try {
           const hitDeleted = projects.find((p) => p.name === name && p.deletedAt);
           if (hitDeleted) {
-            const { error } = await supabase.from("projects").update({ deleted_at: null }).eq("id", hitDeleted.id);
+            const { error } = await api.restoreProjectById(hitDeleted.id);
             if (error) throw error;
           } else {
-            const { error } = await supabase.from("projects").insert([{ name, created_at: createdAt, deleted_at: null }]);
+            const { error } = await api.createProject({ name, createdAt });
             if (error) throw error;
           }
           setNewGenbaName("");
@@ -1523,10 +1216,10 @@ function AppInner() {
         try {
           const hitDeleted = tasks.find((t) => t.name === name && t.deletedAt);
           if (hitDeleted) {
-            const { error } = await supabase.from("tasks").update({ deleted_at: null }).eq("id", hitDeleted.id);
+            const { error } = await api.restoreTaskById(hitDeleted.id);
             if (error) throw error;
           } else {
-            const { error } = await supabase.from("tasks").insert([{ name, created_at: createdAt, deleted_at: null }]);
+            const { error } = await api.createTask({ name, createdAt });
             if (error) throw error;
           }
           setNewTaskName("");
@@ -1541,7 +1234,7 @@ function AppInner() {
         const name = norm(newPersonName);
         if (!name) return;
         try {
-          const { error } = await supabase.from("people").insert([{ name, created_at: createdAt, deleted_at: null }]);
+          const { error } = await api.createPerson({ name, createdAt });
           if (error) throw error;
           setNewPersonName("");
           await reloadMasters();
@@ -1562,15 +1255,15 @@ function AppInner() {
 
       try {
         if (editKind === "genba") {
-          const { error } = await supabase.from("projects").update({ name }).eq("id", editId);
+          const { error } = await api.updateProjectName({ id: editId, name });
           if (error) throw error;
         }
         if (editKind === "task") {
-          const { error } = await supabase.from("tasks").update({ name }).eq("id", editId);
+          const { error } = await api.updateTaskName({ id: editId, name });
           if (error) throw error;
         }
         if (editKind === "people") {
-          const { error } = await supabase.from("people").update({ name }).eq("id", editId);
+          const { error } = await api.updatePersonName({ id: editId, name });
           if (error) throw error;
         }
 
@@ -1594,7 +1287,7 @@ function AppInner() {
 
       try {
         if (kind === "people") {
-          const { error } = await supabase.from("people").update({ deleted_at: now }).eq("id", id);
+          const { error } = await api.softDeletePersonById({ id, nowIso: now });
           if (error) throw error;
           setSelectedPeopleIds((prev) => prev.filter((x) => x !== id));
           await reloadMasters();
@@ -1603,7 +1296,7 @@ function AppInner() {
         }
 
         if (kind === "genba") {
-          const { error } = await supabase.from("projects").update({ deleted_at: now }).eq("id", id);
+          const { error } = await api.softDeleteProjectById({ id, nowIso: now });
           if (error) throw error;
           await reloadMasters();
           setReloadTick((x) => x + 1);
@@ -1611,7 +1304,7 @@ function AppInner() {
         }
 
         if (kind === "task") {
-          const { error } = await supabase.from("tasks").update({ deleted_at: now }).eq("id", id);
+          const { error } = await api.softDeleteTaskById({ id, nowIso: now });
           if (error) throw error;
           await reloadMasters();
           setReloadTick((x) => x + 1);
@@ -1628,7 +1321,7 @@ function AppInner() {
     await guard(async () => {
       clearError();
 
-      const { error } = await supabase.from("people").update({ deleted_at: null }).eq("id", id);
+      const { error } = await api.restorePersonById(id);
       if (error) {
         console.error(error);
         pushError("復元に失敗しました", error?.message || String(error));
@@ -1642,7 +1335,7 @@ function AppInner() {
     await guard(async () => {
       clearError();
 
-      const { error } = await supabase.from("projects").update({ deleted_at: null }).eq("id", id);
+      const { error } = await api.restoreProjectById(id);
       if (error) {
         console.error(error);
         pushError("復元に失敗しました", error?.message || String(error));
@@ -1656,7 +1349,7 @@ function AppInner() {
     await guard(async () => {
       clearError();
 
-      const { error } = await supabase.from("tasks").update({ deleted_at: null }).eq("id", id);
+      const { error } = await api.restoreTaskById(id);
       if (error) {
         console.error(error);
         pushError("復元に失敗しました", error?.message || String(error));
@@ -1734,7 +1427,7 @@ function AppInner() {
     const startYmd = toYmd(start);
     const endYmd = toYmd(end);
 
-    const { data, error } = await supabase.from("events").select("*").gte("date", startYmd).lt("date", endYmd).is("deleted_at", null);
+    const { data, error } = await api.fetchEventsForExport({ startYmd, endYmdExclusive: endYmd });
 
     if (error) {
       console.error("export events load error", error);
@@ -1850,7 +1543,7 @@ function AppInner() {
       wb.SheetNames = names;
     }
 
-    const fileName = `${year}-${pad2(monthIndex0 + 1)}_予定.xlsx`;
+    const fileName = `${padMonthForFile(year, monthIndex0)}_予定.xlsx`;
     XLSX.writeFile(wb, fileName);
   }
 
@@ -1951,895 +1644,165 @@ function AppInner() {
           }
         `}</style>
 
-      <header className="header">
-        <div className="headerTopRow">
-          <h1 className="title">予定表</h1>
-
-          <div className="monthHeaderMenu">
-            <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu("monthMenu"))}>
-              …
-            </button>
-            {openMenuKey === "monthMenu" && (
-              <div className="menu" onClick={(e) => e.stopPropagation()}>
-                <button className="menuBtn" onClick={() => (openMaster("genba"), closeMenu())}>
-                  マスタ
-                </button>
-                <button className="menuBtn" onClick={() => (exportXlsxForCurrentMonth(), closeMenu())}>
-                  Excel出力
-                </button>
-
-                <div className="sep" />
-
-                {/* ★ログイン情報/ログアウトをここに格納（月画面に常時表示しない） */}
-                <div style={{ padding: "8px 10px", fontSize: 12, color: "rgba(0,0,0,.70)" }}>
-                  ログイン中: {session?.user?.email || "（不明）"}
-                </div>
-                <button
-                  className="menuBtn"
-                  disabled={authBusy}
-                  onClick={async () => {
-                    closeMenu();
-                    await handleLogout();
-                  }}
-                >
-                  ログアウト
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {appError ? (
-          <div className="appErrorBar" role="alert">
-            <div style={{ minWidth: 0 }}>
-              <div className="appErrorMsg">{appError.message}</div>
-              {appError.detail ? <div className="appErrorDetail">{appError.detail}</div> : null}
-            </div>
-            <button className="btn" onClick={clearError} style={{ flex: "0 0 auto" }}>
-              閉じる
-            </button>
-          </div>
-        ) : null}
-
-        <div className="monthBar">
-          <button className="btn" onClick={() => setMonthCursor(new Date(year, monthIndex0 - 1, 1))}>
-            ← 前月
-          </button>
-
-          <div className="monthLabel">{monthLabel}</div>
-
-          <button className="btn" onClick={() => setMonthCursor(new Date(year, monthIndex0 + 1, 1))}>
-            翌月 →
-          </button>
-        </div>
-      </header>
+      <MonthHeader
+        session={session}
+        authBusy={authBusy}
+        appError={appError}
+        clearError={clearError}
+        openMenuKey={openMenuKey}
+        toggleMenu={toggleMenu}
+        closeMenu={closeMenu}
+        openMaster={openMaster}
+        exportXlsxForCurrentMonth={exportXlsxForCurrentMonth}
+        handleLogout={handleLogout}
+        monthLabel={monthLabel}
+        year={year}
+        monthIndex0={monthIndex0}
+        setMonthCursor={setMonthCursor}
+      />
 
       <main className="main">
-        <section className="calendarCard">
-          <div className="dowRow">
-            <div className="dowCell" />
-            {["月", "火", "水", "木", "金", "土", "日"].map((x) => (
-              <div key={x} className="dowCell">
-                {x}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid">
-            {weeks.map((wk) => {
-              return (
-                <React.Fragment key={`wk-${wk.mondayYmd}`}>
-                  <button className="weekCell" onClick={() => openWeek(wk.mondayYmd)} title="週間予定">
-                    <span>週</span>
-                  </button>
-
-                  {wk.row.map((cell) => {
-                    if (cell.type === "blank") return <div key={cell.key} className="cell blank" />;
-
-                    const key = cell.ymd;
-                    const { top, rest } = monthCellEvents(key);
-                    const isToday = sameDay(key, todayYmd);
-                    const wcls = weekdayClass(cell);
-
-                    return (
-                      <button
-                        key={cell.key}
-                        className={`cell date ${wcls} ${isToday ? "today" : ""} ${cell.inMonth ? "" : "outside"}`}
-                        onClick={() => openDay(key)}
-                        title={key}
-                      >
-                        <div className="dayNum">{cell.date.getDate()}</div>
-                        <div className="miniList">
-                          {top.map((e) => (
-                            <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
-                              {eventLabel(e)}
-                            </div>
-                          ))}
-                          {rest > 0 ? <div className="more">+{rest}件</div> : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </React.Fragment>
-              );
-            })}
-          </div>
-
-          <div className="tbdRow">
-            <button className="tbdCell" onClick={() => openDay("TBD")}>
-              <div className="tbdTitle">未定</div>
-              <div className="miniList">
-                {monthCellEvents("TBD").top.map((e) => (
-                  <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
-                    {eventLabel(e)}
-                  </div>
-                ))}
-                {monthCellEvents("TBD").rest > 0 ? <div className="more">+{monthCellEvents("TBD").rest}件</div> : null}
-              </div>
-            </button>
-          </div>
-        </section>
+        <MonthGrid weeks={weeks} openWeek={openWeek} openDay={openDay} monthCellEvents={monthCellEvents} sameDay={sameDay} todayYmd={todayYmd} weekdayClass={weekdayClass} eventLabel={eventLabel} />
+        <TbdRow openDay={openDay} monthCellEvents={monthCellEvents} eventLabel={eventLabel} />
       </main>
 
-      {/* 週モーダル */}
-      {isWeekOpen && weekStartYmd && (
-        <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <button className="btn" onClick={closeWeekToMonth}>
-                ← 月へ
-              </button>
-              <div className="modalTitle">{weekStartYmd} 週</div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                <button className="btn" onClick={prevWeek}>
-                  ←
-                </button>
-                <button className="btn" onClick={nextWeek}>
-                  →
-                </button>
-              </div>
-            </div>
+      <WeekModal
+        open={isWeekOpen}
+        weekStartYmd={weekStartYmd}
+        weekDays={weekDays}
+        eventsByKey={eventsByKey}
+        stableEventSort={stableEventSort}
+        eventLabel={eventLabel}
+        peopleLine={peopleLine}
+        closeWeekToMonth={closeWeekToMonth}
+        prevWeek={prevWeek}
+        nextWeek={nextWeek}
+        closeWeek={closeWeek}
+        openDay={openDay}
+        onSurfaceClick={onSurfaceClick}
+        weekBodyRef={weekBodyRef}
+      />
 
-            <div className="modalBody" ref={weekBodyRef} onClick={onSurfaceClick}>
-              <div className="eventList">
-                {weekDays.map(({ wd, ymd }) => {
-                  const list = (eventsByKey[ymd] || []).slice().sort(stableEventSort);
-                  const d = fromYmd(ymd);
-                  const dow = d.getDay();
-                  const isSun = dow === 0;
-                  const isSat = dow === 6;
+      <MasterModal
+        open={isMasterOpen}
+        masterTab={masterTab}
+        setMasterTab={setMasterTab}
+        projectsActive={projectsActive}
+        tasksActive={tasksActive}
+        peopleActiveSorted={peopleActiveSorted}
+        deletedProjects={deletedProjects}
+        deletedTasks={deletedTasks}
+        deletedPeople={deletedPeople}
+        openMenuKey={openMenuKey}
+        toggleMenu={toggleMenu}
+        startEdit={startEdit}
+        deleteMaster={deleteMaster}
+        restoreProject={restoreProject}
+        restoreTask={restoreTask}
+        restorePerson={restorePerson}
+        newGenbaName={newGenbaName}
+        setNewGenbaName={setNewGenbaName}
+        newTaskName={newTaskName}
+        setNewTaskName={setNewTaskName}
+        newPersonName={newPersonName}
+        setNewPersonName={setNewPersonName}
+        editKind={editKind}
+        editId={editId}
+        editName={editName}
+        setEditName={setEditName}
+        addMaster={addMaster}
+        saveMasterEdit={saveMasterEdit}
+        closeMaster={closeMaster}
+        closeMenu={closeMenu}
+        onSurfaceClick={onSurfaceClick}
+        masterBodyRef={masterBodyRef}
+        masterEditAnchorRef={masterEditAnchorRef}
+      />
 
-                  const HEAD_GAP = 1;
-                  const ITEM_GAP = 2;
+      <DayModal
+        open={isDayOpen}
+        selectedKey={selectedKey}
+        returnWeekStart={returnWeekStart}
+        openMenuKey={openMenuKey}
+        canSave={canSave}
+        editingEventId={editingEventId}
+        selectedEvents={selectedEvents}
+        projectInput={projectInput}
+        taskInput={taskInput}
+        note={note}
+        peopleCount={peopleCount}
+        peopleActiveSorted={peopleActiveSorted}
+        selectedPeopleIds={selectedPeopleIds}
+        newPersonInline={newPersonInline}
+        projectSuggestions={projectSuggestions}
+        taskSuggestions={taskSuggestions}
+        currentProjectId={currentProjectId}
+        taskUsageMap={taskUsageMap}
+        COLOR_PALETTE={COLOR_PALETTE}
+        color={color}
+        dayBodyRef={dayBodyRef}
+        onSurfaceClick={onSurfaceClick}
+        toggleMenu={toggleMenu}
+        closeMenu={closeMenu}
+        setMonthCursor={setMonthCursor}
+        closeDay={closeDay}
+        openWeek={openWeek}
+        goPrevDay={goPrevDay}
+        goNextDay={goNextDay}
+        eventLabel={eventLabel}
+        peopleLine={peopleLine}
+        beginEditEvent={beginEditEvent}
+        openMoveModal={openMoveModal}
+        softDeleteEvent={softDeleteEvent}
+        swapOrder={swapOrder}
+        setProjectInput={setProjectInput}
+        setTaskInput={setTaskInput}
+        setNote={setNote}
+        setPeopleCount={setPeopleCount}
+        setPeopleCountManual={setPeopleCountManual}
+        setSelectedPeopleIds={setSelectedPeopleIds}
+        setNewPersonInline={setNewPersonInline}
+        addPersonInline={addPersonInline}
+        setColor={setColor}
+        resetForm={resetForm}
+        openMultiAdd={openMultiAdd}
+        addEvent={addEvent}
+        saveEditEvent={saveEditEvent}
+      />
 
-                  return (
-                    <div key={ymd} className={`eventRow weekRow ${isSun ? "sun" : isSat ? "sat" : ""}`} style={{ paddingTop: 12 }}>
-                      <div className="eventMain weekHead" style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
-                        <span className="weekHeadText">
-                          {wd} {ymd}
-                        </span>
+      <MoveModal
+        open={isMoveOpen}
+        moveMonthLabel={moveMonthLabel}
+        moveYear={moveYear}
+        moveMonthIndex0={moveMonthIndex0}
+        moveGridCells={moveGridCells}
+        setMoveCursor={setMoveCursor}
+        moveEventToTbdInstant={moveEventToTbdInstant}
+        moveEventToYmdInstant={moveEventToYmdInstant}
+        closeMoveModal={closeMoveModal}
+        onSurfaceClick={onSurfaceClick}
+      />
 
-                        <button
-                          className="btn"
-                          onClick={() => {
-                            closeWeek();
-                            openDay(ymd, { fromWeekStartYmd: weekStartYmd });
-                          }}
-                        >
-                          開く
-                        </button>
-                      </div>
-
-                      {list.length === 0 ? (
-                        <div className="eventSub weekBody" style={{ marginTop: HEAD_GAP }}>
-                          予定なし
-                        </div>
-                      ) : (
-                        <div className="eventList weekBody" style={{ marginTop: HEAD_GAP }}>
-                          {list.map((e, i) => (
-                            <div
-                              key={e.id}
-                              style={{
-                                borderTop: i === 0 ? "none" : "1px solid rgba(0,0,0,.08)",
-                                paddingTop: i === 0 ? 0 : ITEM_GAP,
-                                marginTop: i === 0 ? 0 : ITEM_GAP,
-                              }}
-                            >
-                              <div style={{ color: e.color ?? "#111", fontWeight: 800 }}>{eventLabel(e)}</div>
-                              <div style={{ marginTop: 4, marginLeft: 12, color: "rgba(0,0,0,.60)", fontSize: 13 }}>{peopleLine(e)}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* マスタ管理モーダル */}
-      {isMasterOpen && (
-        <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <button className="btn" onClick={closeMaster}>
-                ← 戻る
-              </button>
-              <div className="modalTitle">マスタ管理</div>
-              <div style={{ width: 72 }} />
-            </div>
-
-            <div className="modalBody" ref={masterBodyRef} onClick={onSurfaceClick}>
-              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                <button className="btn" onClick={() => setMasterTab("genba")} disabled={masterTab === "genba"}>
-                  現場
-                </button>
-                <button className="btn" onClick={() => setMasterTab("task")} disabled={masterTab === "task"}>
-                  作業
-                </button>
-                <button className="btn" onClick={() => setMasterTab("people")} disabled={masterTab === "people"}>
-                  人員
-                </button>
-              </div>
-
-              <div className="eventList">
-                {(masterTab === "genba" ? projectsActive : masterTab === "task" ? tasksActive : peopleActiveSorted).map((row) => {
-                  const mk = `master-${masterTab}-${row.id}`;
-                  return (
-                    <div key={row.id} className="eventRow">
-                      <div className="eventMain">{row.name}</div>
-
-                      <div className="eventActions">
-                        <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu(mk))}>
-                          …
-                        </button>
-
-                        {openMenuKey === mk && (
-                          <div className="menu" onClick={(e) => e.stopPropagation()}>
-                            <button className="menuBtn" onClick={() => startEdit(masterTab, row)}>
-                              編集
-                            </button>
-                            <button className="menuBtn" onClick={() => (deleteMaster(masterTab, row.id), closeMenu())}>
-                              削除
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {masterTab === "genba" && deletedProjects.length > 0 && (
-                <>
-                  <div style={{ height: 14 }} />
-                  <div className="sectionTitle" style={{ margin: 0 }}>
-                    削除済み
-                  </div>
-                  <div className="eventList" style={{ marginTop: 10 }}>
-                    {deletedProjects.map((p) => {
-                      const mk = `master-deleted-genba-${p.id}`;
-                      return (
-                        <div key={p.id} className="eventRow">
-                          <div className="eventMain">{p.name}（削除済み）</div>
-                          <div className="eventActions">
-                            <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu(mk))}>
-                              …
-                            </button>
-                            {openMenuKey === mk && (
-                              <div className="menu" onClick={(e) => e.stopPropagation()}>
-                                <button className="menuBtn" onClick={() => (restoreProject(p.id), closeMenu())}>
-                                  復元
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {masterTab === "task" && deletedTasks.length > 0 && (
-                <>
-                  <div style={{ height: 14 }} />
-                  <div className="sectionTitle" style={{ margin: 0 }}>
-                    削除済み
-                  </div>
-                  <div className="eventList" style={{ marginTop: 10 }}>
-                    {deletedTasks.map((t) => {
-                      const mk = `master-deleted-task-${t.id}`;
-                      return (
-                        <div key={t.id} className="eventRow">
-                          <div className="eventMain">{t.name}（削除済み）</div>
-                          <div className="eventActions">
-                            <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu(mk))}>
-                              …
-                            </button>
-                            {openMenuKey === mk && (
-                              <div className="menu" onClick={(e) => e.stopPropagation()}>
-                                <button className="menuBtn" onClick={() => (restoreTask(t.id), closeMenu())}>
-                                  復元
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              {masterTab === "people" && deletedPeople.length > 0 && (
-                <>
-                  <div style={{ height: 14 }} />
-                  <div className="sectionTitle" style={{ margin: 0 }}>
-                    削除済み
-                  </div>
-                  <div className="eventList" style={{ marginTop: 10 }}>
-                    {deletedPeople.map((p) => {
-                      const mk = `master-deleted-people-${p.id}`;
-                      return (
-                        <div key={p.id} className="eventRow">
-                          <div className="eventMain">{p.name}（削除済み）</div>
-                          <div className="eventActions">
-                            <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu(mk))}>
-                              …
-                            </button>
-                            {openMenuKey === mk && (
-                              <div className="menu" onClick={(e) => e.stopPropagation()}>
-                                <button className="menuBtn" onClick={() => (restorePerson(p.id), closeMenu())}>
-                                  復元
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-
-              <div style={{ height: 16 }} />
-
-              <div className="form">
-                {masterTab === "genba" && (
-                  <div className="field">
-                    <div className="label">現場を追加</div>
-                    <div className="addPersonRow">
-                      <input className="input" value={newGenbaName} onChange={(e) => setNewGenbaName(e.target.value)} placeholder="例：新しい現場名" />
-                      <button className="btn" onClick={() => addMaster("genba")}>
-                        追加
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {masterTab === "task" && (
-                  <div className="field">
-                    <div className="label">作業を追加</div>
-                    <div className="addPersonRow">
-                      <input className="input" value={newTaskName} onChange={(e) => setNewTaskName(e.target.value)} placeholder="例：新しい作業名" />
-                      <button className="btn" onClick={() => addMaster("task")}>
-                        追加
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {masterTab === "people" && (
-                  <div className="field">
-                    <div className="label">人員を追加</div>
-                    <div className="addPersonRow">
-                      <input className="input" value={newPersonName} onChange={(e) => setNewPersonName(e.target.value)} placeholder="例：田中" />
-                      <button className="btn" onClick={() => addMaster("people")}>
-                        追加
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <div ref={masterEditAnchorRef} style={{ height: 1 }} />
-
-                <div className="field">
-                  <div className="label">名前を編集</div>
-                  <input className="input" value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="一覧の「…→編集」で選んでから変更" />
-                  <button className="btn primary" disabled={!editKind || !editId || !norm(editName)} onClick={saveMasterEdit}>
-                    保存
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div className="modalFooter">
-              <button className="btn primary" onClick={closeMaster}>
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 日詳細モーダル */}
-      {isDayOpen && selectedKey && (
-        <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <div style={{ display: "flex", gap: 8 }}>
-                {selectedKey !== "TBD" && (
-                  <button
-                    className="btn"
-                    onClick={() => {
-                      const wk = returnWeekStart ?? mondayOfYmd(selectedKey);
-                      closeDay();
-                      openWeek(wk);
-                    }}
-                  >
-                    ←週
-                  </button>
-                )}
-
-                <button
-                  className="btn"
-                  onClick={() => {
-                    const d = selectedKey !== "TBD" ? fromYmd(selectedKey) : new Date();
-                    setMonthCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-                    closeDay();
-                  }}
-                >
-                  ←月
-                </button>
-              </div>
-
-              <div className="modalTitle">{selectedKey === "TBD" ? "未定" : selectedKey}</div>
-
-              {selectedKey !== "TBD" ? (
-                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                  <button className="btn" onClick={goPrevDay}>
-                    ←
-                  </button>
-                  <button className="btn" onClick={goNextDay}>
-                    →
-                  </button>
-                </div>
-              ) : (
-                <div style={{ width: 72 }} />
-              )}
-            </div>
-
-            <div className="modalBody" ref={dayBodyRef} onClick={onSurfaceClick}>
-              <h2 className="sectionTitle">その日の予定</h2>
-
-              {selectedEvents.length === 0 ? (
-                <div className="empty">この日の予定はまだありません</div>
-              ) : (
-                <div className="eventList">
-                  {selectedEvents.map((e, idx) => {
-                    const mk = `day-${e.id}`;
-                    return (
-                      <div key={e.id} className="eventRow">
-                        <div className="eventMain" style={{ color: e.color ?? "#111" }}>
-                          {eventLabel(e)}
-                        </div>
-                        <div className="eventSub">{peopleLine(e)}</div>
-
-                        <div className="eventActions">
-                          <button className="dots" onClick={(ev) => (ev.stopPropagation(), toggleMenu(mk))}>
-                            …
-                          </button>
-
-                          {openMenuKey === mk && (
-                            <div className="menu" onClick={(ev) => ev.stopPropagation()}>
-                              <button className="menuBtn" onClick={() => (beginEditEvent(e), closeMenu())}>
-                                編集
-                              </button>
-                              <button className="menuBtn" onClick={() => (openMoveModal(e.id), closeMenu())}>
-                                移動
-                              </button>
-                              <button className="menuBtn" onClick={() => (softDeleteEvent(e.id), closeMenu())}>
-                                削除
-                              </button>
-                              <div className="sep" />
-                              <button className="menuBtn" disabled={idx === 0} onClick={() => idx > 0 && (swapOrder(selectedEvents[idx - 1], e), closeMenu())}>
-                                ↑
-                              </button>
-                              <button
-                                className="menuBtn"
-                                disabled={idx === selectedEvents.length - 1}
-                                onClick={() => idx < selectedEvents.length - 1 && (swapOrder(e, selectedEvents[idx + 1]), closeMenu())}
-                              >
-                                ↓
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              <h2 className="sectionTitle">{editingEventId ? "編集" : "追加"}</h2>
-
-              <div className="form">
-                <div className="field">
-                  <div className="label">現場（必須）</div>
-                  <input className="input" value={projectInput} onChange={(e) => setProjectInput(e.target.value)} placeholder="例：S湖西 / 休み / 応援" />
-                  <div className="chips chipsScroll">
-                    {projectSuggestions.map((p) => (
-                      <button key={p.id} className={`chip ${norm(projectInput) === p.name ? "active" : ""}`} onClick={() => setProjectInput(p.name)}>
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="field">
-                  <div className="label">作業（任意）</div>
-                  <input className="input" value={taskInput} onChange={(e) => setTaskInput(e.target.value)} placeholder="空欄OK" />
-                  <div className="chips chipsScroll">
-                    {taskSuggestions.map((t) => (
-                      <button
-                        key={t.id}
-                        className={`chip ${norm(taskInput) === t.name ? "active" : ""}`}
-                        onClick={() => setTaskInput(t.name)}
-                        title={currentProjectId ? `使用回数: ${taskUsageMap[`${currentProjectId}:${t.id}`] ?? 0}` : ""}
-                      >
-                        {t.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="field">
-                  <div className="label">メモ（任意）</div>
-                  <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：時間 / 住所など" />
-                </div>
-
-                <div className="field">
-                  <div className="label">人数（未入力OK）</div>
-                  <div className="counterRow">
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        if (peopleCount === null) return;
-                        setPeopleCountManual(true);
-                        setPeopleCount(clamp(peopleCount - 1, 0, 99));
-                      }}
-                    >
-                      -
-                    </button>
-                    <div className="counterValue">{peopleCount === null ? "未入力" : `${peopleCount}名`}</div>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        setPeopleCountManual(true);
-                        if (peopleCount === null) setPeopleCount(1);
-                        else setPeopleCount(clamp(peopleCount + 1, 0, 99));
-                      }}
-                    >
-                      +
-                    </button>
-                    <button
-                      className="btn"
-                      onClick={() => {
-                        setPeopleCount(null);
-                        setPeopleCountManual(false);
-                      }}
-                    >
-                      未入力
-                    </button>
-                  </div>
-                </div>
-
-                <div className="field">
-                  <div className="label">人員</div>
-
-                  <div className="peopleBoxFixed">
-                    {peopleActiveSorted.map((p) => {
-                      const checked = selectedPeopleIds.includes(p.id);
-                      return (
-                        <label key={p.id} className="personRowFixed">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={(e) => {
-                              const on = e.target.checked;
-                              setSelectedPeopleIds((prev) => {
-                                const next = on ? [...prev, p.id] : prev.filter((x) => x !== p.id);
-                                return uniqNumArray(next);
-                              });
-                            }}
-                          />
-                          <span>{p.name}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-
-                  <div className="addPersonRow" style={{ marginTop: 10 }}>
-                    <input className="input" value={newPersonInline} onChange={(e) => setNewPersonInline(e.target.value)} placeholder="例：田中" />
-                    <button type="button" className="btn" onClick={addPersonInline}>
-                      追加
-                    </button>
-                  </div>
-                </div>
-
-                <div className="field">
-                  <div className="label">予定の色（任意）</div>
-                  <div className="colorGrid">
-                    {COLOR_PALETTE.map((c) => {
-                      const selected = (c.key ?? null) === (color ?? null);
-                      return (
-                        <button
-                          key={String(c.key)}
-                          type="button"
-                          className={`colorDot ${selected ? "active" : ""}`}
-                          style={{ background: c.key ?? "#111" }}
-                          onClick={() => setColor(c.key ?? null)}
-                          title={c.label}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {editingEventId && (
-                  <div className="field">
-                    <button className="btn" onClick={resetForm}>
-                      編集をやめる
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="modalFooter">
-              {editingEventId ? (
-                <button className="btn primary" disabled={!canSave} onClick={saveEditEvent}>
-                  保存
-                </button>
-              ) : (
-                <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end" }}>
-                  <button className="btn" disabled={!canSave} onClick={openMultiAdd}>
-                    複数日に追加
-                  </button>
-                  <button className="btn primary" disabled={!canSave} onClick={addEvent}>
-                    追加
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ★予定を移動モーダル（タップ即移動） */}
-      {isMoveOpen && (
-        <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <button className="btn" onClick={closeMoveModal}>
-                ← 戻る
-              </button>
-              <div className="modalTitle">移動先を選択</div>
-              <div style={{ width: 72 }} />
-            </div>
-
-            <div className="modalBody" onClick={onSurfaceClick}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <button className="btn" onClick={() => setMoveCursor(new Date(moveYear, moveMonthIndex0 - 1, 1))}>
-                  ←
-                </button>
-                <div style={{ fontWeight: 800 }}>{moveMonthLabel}</div>
-                <button className="btn" onClick={() => setMoveCursor(new Date(moveYear, moveMonthIndex0 + 1, 1))}>
-                  →
-                </button>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginBottom: 10, justifyContent: "flex-end" }}>
-                <button className="btn" onClick={moveEventToTbdInstant}>
-                  未定へ移動
-                </button>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  gap: 6,
-                  padding: 8,
-                  border: "1px solid rgba(0,0,0,.10)",
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,.70)",
-                }}
-              >
-                {["月", "火", "水", "木", "金", "土", "日"].map((x) => (
-                  <div key={`mh-${x}`} style={{ textAlign: "center", fontWeight: 800, fontSize: 12, color: "rgba(0,0,0,.70)" }}>
-                    {x}
-                  </div>
-                ))}
-
-                {moveGridCells.map((cell) => {
-                  if (cell.type === "blank") return <div key={cell.key} style={{ height: 36 }} />;
-
-                  const ymd = cell.ymd;
-                  const dow = cell.date.getDay();
-                  const isSat = dow === 6;
-                  const isSun = dow === 0;
-
-                  return (
-                    <button
-                      key={cell.key}
-                      className="btn"
-                      onClick={() => moveEventToYmdInstant(ymd)}
-                      style={{
-                        height: 36,
-                        padding: 0,
-                        fontWeight: 800,
-                        borderRadius: 10,
-                        border: "1px solid rgba(0,0,0,.12)",
-                        background: isSun ? "var(--sun)" : isSat ? "var(--sat)" : "rgba(255,255,255,.85)",
-                        color: isSun ? "#b00020" : isSat ? "#0b57d0" : "#111",
-                      }}
-                      title={ymd}
-                    >
-                      {cell.date.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: 10, color: "rgba(0,0,0,.65)", fontSize: 13 }}>日付をタップした瞬間に移動します</div>
-            </div>
-
-            <div className="modalFooter">
-              <button className="btn" onClick={closeMoveModal}>
-                閉じる
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ★複数日に追加モーダル */}
-      {isMultiAddOpen && (
-        <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modalHeader">
-              <button className="btn" onClick={closeMultiAdd}>
-                ← 戻る
-              </button>
-              <div className="modalTitle">複数日に追加</div>
-              <div style={{ width: 72 }} />
-            </div>
-
-            <div className="modalBody" onClick={onSurfaceClick}>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <button className="btn" onClick={() => setMultiCursor(new Date(multiYear, multiMonthIndex0 - 1, 1))}>
-                  ←
-                </button>
-                <div style={{ fontWeight: 800 }}>{multiMonthLabel}</div>
-                <button className="btn" onClick={() => setMultiCursor(new Date(multiYear, multiMonthIndex0 + 1, 1))}>
-                  →
-                </button>
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-                <button className="btn" disabled={multiMode === "range"} onClick={() => setMultiMode("range")}>
-                  範囲選択
-                </button>
-                <button className="btn" disabled={multiMode === "multi"} onClick={() => setMultiMode("multi")}>
-                  複数選択
-                </button>
-                <button className="btn" disabled={multiMode === "weekday"} onClick={() => setMultiMode("weekday")}>
-                  曜日選択
-                </button>
-              </div>
-
-              {multiMode === "range" && <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 10 }}>開始日→終了日をタップ（※土日除外は固定）</div>}
-              {multiMode === "multi" && <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 10 }}>日付をタップして追加/解除</div>}
-              {multiMode === "weekday" && (
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                  {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
-                    const on = weekdaySelected.has(dow);
-                    return (
-                      <label key={dow} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <input
-                          type="checkbox"
-                          checked={on}
-                          onChange={(e) => {
-                            const checked = e.target.checked;
-                            setWeekdaySelected((prev) => {
-                              const next = new Set(prev);
-                              if (checked) next.add(dow);
-                              else next.delete(dow);
-                              return next;
-                            });
-                          }}
-                        />
-                        <span>{weekdayLabelJP(dow)}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(7, 1fr)",
-                  gap: 6,
-                  padding: 8,
-                  border: "1px solid rgba(0,0,0,.10)",
-                  borderRadius: 12,
-                  background: "rgba(255,255,255,.70)",
-                }}
-              >
-                {["月", "火", "水", "木", "金", "土", "日"].map((x) => (
-                  <div key={`h-${x}`} style={{ textAlign: "center", fontWeight: 800, fontSize: 12, color: "rgba(0,0,0,.70)" }}>
-                    {x}
-                  </div>
-                ))}
-
-                {multiGridCells.map((cell) => {
-                  if (cell.type === "blank") return <div key={cell.key} style={{ height: 36 }} />;
-
-                  const ymd = cell.ymd;
-                  const isSel = isSelectedInMultiModal(ymd);
-
-                  const dow = cell.date.getDay();
-                  const isSat = dow === 6;
-                  const isSun = dow === 0;
-
-                  const disabledTap = multiMode === "weekday";
-
-                  return (
-                    <button
-                      key={cell.key}
-                      className="btn"
-                      disabled={disabledTap}
-                      onClick={() => onPickDayInMultiModal(ymd)}
-                      style={{
-                        height: 36,
-                        padding: 0,
-                        fontWeight: 800,
-                        borderRadius: 10,
-                        border: isSel ? "2px solid rgba(0,0,0,.60)" : "1px solid rgba(0,0,0,.12)",
-                        background: isSel ? "rgba(0,0,0,.07)" : isSun ? "var(--sun)" : isSat ? "var(--sat)" : "rgba(255,255,255,.85)",
-                        opacity: disabledTap ? 0.6 : 1,
-                        color: isSun ? "#b00020" : isSat ? "#0b57d0" : "#111",
-                      }}
-                      title={ymd}
-                    >
-                      {cell.date.getDate()}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div style={{ marginTop: 10, color: "rgba(0,0,0,.65)", fontSize: 13 }}>選択日数: {buildSelectedYmdsForConfirm().length}日</div>
-            </div>
-
-            <div className="modalFooter">
-              <div style={{ display: "flex", gap: 8, width: "100%", justifyContent: "flex-end" }}>
-                <button className="btn" onClick={closeMultiAdd}>
-                  キャンセル
-                </button>
-                <button className="btn primary" disabled={!canSave || buildSelectedYmdsForConfirm().length === 0} onClick={addEventToMultipleDays}>
-                  追加
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <MultiAddModal
+        open={isMultiAddOpen}
+        multiYear={multiYear}
+        multiMonthIndex0={multiMonthIndex0}
+        multiMonthLabel={multiMonthLabel}
+        setMultiCursor={setMultiCursor}
+        multiMode={multiMode}
+        setMultiMode={setMultiMode}
+        weekdaySelected={weekdaySelected}
+        setWeekdaySelected={setWeekdaySelected}
+        weekdayLabelJP={weekdayLabelJP}
+        multiGridCells={multiGridCells}
+        isSelectedInMultiModal={isSelectedInMultiModal}
+        onPickDayInMultiModal={onPickDayInMultiModal}
+        buildSelectedYmdsForConfirm={buildSelectedYmdsForConfirm}
+        canSave={canSave}
+        closeMultiAdd={closeMultiAdd}
+        addEventToMultipleDays={addEventToMultipleDays}
+        onSurfaceClick={onSurfaceClick}
+      />
     </div>
   );
 }
