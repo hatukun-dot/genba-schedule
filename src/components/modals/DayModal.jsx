@@ -10,6 +10,8 @@ export function DayModal({
   canSave,
   editingEventId,
   selectedEvents,
+  selectedEventsDisplay,
+  selectedDayDowLabel,
   projectInput,
   taskInput,
   note,
@@ -85,7 +87,9 @@ export function DayModal({
             </button>
           </div>
 
-          <div className="modalTitle">{selectedKey === "TBD" ? "未定" : selectedKey}</div>
+          <div className="modalTitle">
+            {selectedKey === "TBD" ? "未定" : `${selectedKey}${selectedDayDowLabel ? `（${selectedDayDowLabel}）` : ""}`}
+          </div>
 
           {selectedKey !== "TBD" ? (
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
@@ -104,11 +108,11 @@ export function DayModal({
         <div className="modalBody" ref={dayBodyRef} onClick={onSurfaceClick}>
           <h2 className="sectionTitle">その日の予定</h2>
 
-          {selectedEvents.length === 0 ? (
+          {selectedEventsDisplay.length === 0 ? (
             <div className="empty">この日の予定はまだありません</div>
           ) : (
             <div className="eventList">
-              {selectedEvents.map((e, idx) => {
+              {selectedEventsDisplay.map((e, idx) => {
                 const mk = `day-${e.id}`;
                 return (
                   <div key={e.id} className="eventRow">
@@ -139,8 +143,8 @@ export function DayModal({
                           </button>
                           <button
                             className="menuBtn"
-                            disabled={idx === selectedEvents.length - 1}
-                            onClick={() => idx < selectedEvents.length - 1 && (swapOrder(e, selectedEvents[idx + 1]), closeMenu())}
+                                disabled={idx === selectedEventsDisplay.length - 1}
+                                onClick={() => idx < selectedEventsDisplay.length - 1 && (swapOrder(e, selectedEventsDisplay[idx + 1]), closeMenu())}
                           >
                             ↓
                           </button>

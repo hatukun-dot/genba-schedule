@@ -1,5 +1,6 @@
 import React from "react";
 import { fromYmd } from "../../utils/date";
+import { isHolidayDate } from "../../utils/holiday";
 
 export function WeekModal({
   open,
@@ -43,7 +44,8 @@ export function WeekModal({
               const list = (eventsByKey[ymd] || []).slice().sort(stableEventSort);
               const d = fromYmd(ymd);
               const dow = d.getDay();
-              const isSun = dow === 0;
+              const isHoliday = isHolidayDate(d);
+              const isSun = dow === 0 || isHoliday;
               const isSat = dow === 6;
 
               const HEAD_GAP = 1;

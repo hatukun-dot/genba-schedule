@@ -14,6 +14,7 @@ import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
 import { normalizeEventRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
 import * as api from "./services/api";
+import { isHolidayDate } from "./utils/holiday";
 
 // 「休み」「応援」の優先順位（表示用）
 function pinRank(genbaName) {
@@ -288,6 +289,7 @@ function AppInner() {
     list.sort(stableEventSort);
     return list;
   }, [eventsByKey, selectedKey]);
+  const selectedEventsDisplay = useMemo(() => sortEventsForDisplay(selectedEvents), [selectedEvents, projects, tasks, peopleAll]);
 
   function openMoveModal(eventId) {
     const e = (selectedEvents || []).find((x) => x.id === eventId);
@@ -709,16 +711,15 @@ function AppInner() {
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
     const dow = cell.date.getDay();
-    if (dow === 0) return "sun";
+    const isHoliday = isHolidayDate(cell.date);
+    if (dow === 0 || isHoliday) return "sun";
     if (dow === 6) return "sat";
     return "";
   }
 
-  function monthCellEvents(key) {
-    const list = (eventsByKey[key] || []).slice();
-
-    // 既存の pinRank を優先しつつ、同順位内は安定化
-    list.sort((a, b) => {
+  function sortEventsForDisplay(list) {
+    const src = (list || []).slice();
+    src.sort((a, b) => {
       const ga = genbaNameById(a.projectId);
       const gb = genbaNameById(b.projectId);
       const ra = pinRank(ga.replace("（削除済み）", ""));
@@ -726,7 +727,11 @@ function AppInner() {
       if (ra !== rb) return ra - rb;
       return stableEventSort(a, b);
     });
+    return src;
+  }
 
+  function monthCellEvents(key) {
+    const list = sortEventsForDisplay(eventsByKey[key] || []);
     const top = list.slice(0, 3);
     const rest = list.length - top.length;
     return { top, rest };
@@ -1579,6 +1584,16 @@ function AppInner() {
     return ["日", "月", "火", "水", "木", "金", "土"][dow];
   }
 
+  const selectedDayDowLabel = useMemo(() => {
+    if (!selectedKey || selectedKey === "TBD") return "";
+    try {
+      const d = fromYmd(selectedKey);
+      return weekdayLabelJP(d.getDay());
+    } catch {
+      return "";
+    }
+  }, [selectedKey]);
+
   return (
     <div className="app">
       <style>{`
@@ -1734,6 +1749,8 @@ function AppInner() {
         canSave={canSave}
         editingEventId={editingEventId}
         selectedEvents={selectedEvents}
+        selectedEventsDisplay={selectedEventsDisplay}
+        selectedDayDowLabel={selectedDayDowLabel}
         projectInput={projectInput}
         taskInput={taskInput}
         note={note}
