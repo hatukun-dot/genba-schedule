@@ -204,12 +204,13 @@ input, select { font: inherit; }
 /* 未定(TBD) */
 .tbdRow {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-end; /* 金・土・日の列側に寄せる */
   margin-top: 10px;
 }
 
 .tbdCell {
   width: calc(((100% - 7 * 8px - 46px) / 7) * 3 + 8px * 2);
+  /* 高さは通常の日付セルと同じ一行ぶん */
   min-height: 74px;
   border-radius: 14px;
   border: 1px dashed rgba(0,0,0,.25);
@@ -488,8 +489,9 @@ input, select { font: inherit; }
   .chips { grid-template-columns: repeat(3, 1fr); }
 
   .tbdCell {
-  width: calc(((100% - 7 * 6px - 34px) / 7) * 3 + 6px * 2);
-}
+    width: calc(((100% - 7 * 6px - 34px) / 7) * 3 + 6px * 2);
+    min-height: 64px; /* モバイル時も通常セルと同じ高さ */
+  }
 }
 /* 月ヘッダー上段：タイトル左、…右 */
 .headerTopRow{
