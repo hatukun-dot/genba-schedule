@@ -1,15 +1,7 @@
 import React from "react";
+import { TbdRow } from "./TbdRow";
 
-export function MonthGrid({
-  weeks,
-  openWeek,
-  openDay,
-  monthCellEvents,
-  sameDay,
-  todayYmd,
-  weekdayClass,
-  eventLabel,
-}) {
+export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel }) {
   return (
     <section className="calendarCard">
       <div className="dowRow">
@@ -60,6 +52,9 @@ export function MonthGrid({
           );
         })}
       </div>
+
+      {/* 未定行もカード内に配置 */}
+      <TbdRow openDay={openDay} monthCellEvents={monthCellEvents} eventLabel={eventLabel} />
     </section>
   );
 }

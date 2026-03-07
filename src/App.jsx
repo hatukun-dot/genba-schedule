@@ -9,7 +9,6 @@ import { MoveModal } from "./components/modals/MoveModal";
 import { MultiAddModal } from "./components/modals/MultiAddModal";
 import { MonthHeader } from "./components/month/MonthHeader";
 import { MonthGrid } from "./components/month/MonthGrid";
-import { TbdRow } from "./components/month/TbdRow";
 import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
 import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
@@ -1662,8 +1661,16 @@ function AppInner() {
       />
 
       <main className="main">
-        <MonthGrid weeks={weeks} openWeek={openWeek} openDay={openDay} monthCellEvents={monthCellEvents} sameDay={sameDay} todayYmd={todayYmd} weekdayClass={weekdayClass} eventLabel={eventLabel} />
-        <TbdRow openDay={openDay} monthCellEvents={monthCellEvents} eventLabel={eventLabel} />
+        <MonthGrid
+          weeks={weeks}
+          openWeek={openWeek}
+          openDay={openDay}
+          monthCellEvents={monthCellEvents}
+          sameDay={sameDay}
+          todayYmd={todayYmd}
+          weekdayClass={weekdayClass}
+          eventLabel={eventLabel}
+        />
       </main>
 
       <WeekModal
