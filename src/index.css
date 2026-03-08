@@ -238,10 +238,13 @@ input, select { font: inherit; }
 }
 
 .modal {
-  width: min(820px, 100%);
+  /* 画面切り替えに近いフル幅モーダル（PC/スマホ共通） */
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
   background: var(--panel);
-  border-left: 1px solid var(--line);
-  border-right: 1px solid var(--line);
+  border-left: none;
+  border-right: none;
   display: flex;
   flex-direction: column;
 }

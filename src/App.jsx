@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { db, seedIfNeeded, COLOR_PALETTE } from "./db";
 import { AuthGate, useAuth } from "./components/auth/AuthGate";
-import { WeekModal } from "./components/modals/WeekModal";
 import { MasterModal } from "./components/modals/MasterModal";
 import { DayModal } from "./components/modals/DayModal";
 import { MoveModal } from "./components/modals/MoveModal";
@@ -1699,24 +1698,6 @@ function AppInner() {
         />
       </main>
 
-      <WeekModal
-        open={isWeekOpen}
-        weekStartYmd={weekStartYmd}
-        weekDays={weekDays}
-        eventsByKey={eventsByKey}
-        stableEventSort={stableEventSort}
-        eventLabel={eventLabel}
-        peopleLine={peopleLine}
-        sortEventsForDisplay={sortEventsForDisplay}
-        closeWeekToMonth={closeWeekToMonth}
-        prevWeek={prevWeek}
-        nextWeek={nextWeek}
-        closeWeek={closeWeek}
-        openDay={openDay}
-        onSurfaceClick={onSurfaceClick}
-        weekBodyRef={weekBodyRef}
-      />
-
       <MasterModal
         open={isMasterOpen}
         masterTab={masterTab}
@@ -1756,7 +1737,6 @@ function AppInner() {
       <DayModal
         open={isDayOpen}
         selectedKey={selectedKey}
-        returnWeekStart={returnWeekStart}
         openMenuKey={openMenuKey}
         canSave={canSave}
         editingEventId={editingEventId}
@@ -1782,7 +1762,6 @@ function AppInner() {
         closeMenu={closeMenu}
         setMonthCursor={setMonthCursor}
         closeDay={closeDay}
-        openWeek={openWeek}
         goPrevDay={goPrevDay}
         goNextDay={goNextDay}
         eventLabel={eventLabel}

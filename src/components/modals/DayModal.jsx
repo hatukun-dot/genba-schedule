@@ -5,7 +5,6 @@ import { norm, uniqNumArray } from "../../utils/id";
 export function DayModal({
   open,
   selectedKey,
-  returnWeekStart,
   openMenuKey,
   canSave,
   editingEventId,
@@ -32,7 +31,6 @@ export function DayModal({
   closeMenu,
   setMonthCursor,
   closeDay,
-  openWeek,
   goPrevDay,
   goNextDay,
   eventLabel,
@@ -62,19 +60,6 @@ export function DayModal({
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modalHeader">
           <div style={{ display: "flex", gap: 8 }}>
-            {selectedKey !== "TBD" && (
-              <button
-                className="btn"
-                onClick={() => {
-                  const wk = returnWeekStart ?? mondayOfYmd(selectedKey);
-                  closeDay();
-                  openWeek(wk);
-                }}
-              >
-                ←週
-              </button>
-            )}
-
             <button
               className="btn"
               onClick={() => {
@@ -91,18 +76,14 @@ export function DayModal({
             {selectedKey === "TBD" ? "未定" : `${selectedKey}${selectedDayDowLabel ? `（${selectedDayDowLabel}）` : ""}`}
           </div>
 
-          {selectedKey !== "TBD" ? (
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button className="btn" onClick={goPrevDay}>
-                ←
-              </button>
-              <button className="btn" onClick={goNextDay}>
-                →
-              </button>
-            </div>
-          ) : (
-            <div style={{ width: 72 }} />
-          )}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            <button className="btn" onClick={goPrevDay} disabled={selectedKey === "TBD"}>
+              ←
+            </button>
+            <button className="btn" onClick={goNextDay} disabled={selectedKey === "TBD"}>
+              →
+            </button>
+          </div>
         </div>
 
         <div className="modalBody" ref={dayBodyRef} onClick={onSurfaceClick}>

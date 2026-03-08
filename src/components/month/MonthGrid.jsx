@@ -1,11 +1,10 @@
 import React from "react";
 import { TbdRow } from "./TbdRow";
 
-export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
+export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
   return (
     <section className="calendarCard">
       <div className="dowRow">
-        <div className="dowCell" />
         {["月", "火", "水", "木", "金", "土", "日"].map((x) => (
           <div key={x} className="dowCell">
             {x}
@@ -17,10 +16,6 @@ export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, 
         {weeks.map((wk) => {
           return (
             <React.Fragment key={`wk-${wk.mondayYmd}`}>
-              <button className="weekCell" onClick={() => openWeek(wk.mondayYmd)} title="週間予定">
-                <span>週</span>
-              </button>
-
               {wk.row.map((cell) => {
                 if (cell.type === "blank") return <div key={cell.key} className="cell blank" />;
 
@@ -41,7 +36,7 @@ export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, 
                       {top.map((e) => {
                         const main = eventLabel(e);
                         const people = monthPeopleSummary ? monthPeopleSummary(e) : "";
-                        const line = people ? `${main} ${people}` : main;
+                        const line = people ? `${main}${people}` : main;
                         return (
                           <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
                             {line}
