@@ -713,9 +713,9 @@ function AppInner() {
     const n = e.peopleCount ?? names.length;
     if (!n || n <= 0) return "";
     if (n <= 2 && names.length > 0) {
-      return names.join("、");
+      return `（${names.join("、")}）`;
     }
-    return `${n}名`;
+    return `（${n}名）`;
   }
 
   function weekdayClass(cell) {

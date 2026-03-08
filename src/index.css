@@ -462,37 +462,7 @@ input, select { font: inherit; }
 
   .app { padding: 16px 12px 80px; }
 
-  .calendarCard {
-    width: 100%;
-    padding: 10px;
-  }
-
-  /* ★スマホは列をさらに縮める（週列も含めて必ず収める） */
-  .dowRow, .grid {
-    grid-template-columns: 25px repeat(7, minmax(0, 1fr));
-    gap: 4px;
-  }
-
-  .weekCell { min-height: 64px; }
-  .cell { min-height: 64px; padding: 8px 3px; }
-  .cell.date .dayNum { left: 6px; }  /* 8px → 6px（見た目のバランス用） */
-
-  .dayNum { margin-bottom: 4px; }
-
-  /* ★予定は必ず1行省略 */
-  /* スマホは情報量優先で極小フォントにする（ダブルタップ拡大前提） */
-  .miniItem {
-    font-size: 6.5px;
-    line-height: 1.0;
-    letter-spacing: -0.06em;
-  }
-
   .chips { grid-template-columns: repeat(3, 1fr); }
-
-  .tbdCell {
-    width: calc(((100% - 7 * 6px - 34px) / 7) * 3 + 6px * 2);
-    min-height: 64px; /* モバイル時も通常セルと同じ高さ */
-  }
 }
 /* 月ヘッダー上段：タイトル左、…右 */
 .headerTopRow{
