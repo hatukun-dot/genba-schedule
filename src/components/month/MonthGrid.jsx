@@ -40,11 +40,11 @@ export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, 
                     <div className="miniList">
                       {top.map((e) => {
                         const main = eventLabel(e);
-                        const sub = monthPeopleSummary ? monthPeopleSummary(e) : "";
+                        const people = monthPeopleSummary ? monthPeopleSummary(e) : "";
+                        const line = people ? `${main} ${people}` : main;
                         return (
                           <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
-                            <div className="miniItemMain">{main}</div>
-                            {sub ? <div className="miniItemSub">{sub}</div> : null}
+                            {line}
                           </div>
                         );
                       })}
