@@ -1,7 +1,7 @@
 import React from "react";
 import { TbdRow } from "./TbdRow";
 
-export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel }) {
+export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
   return (
     <section className="calendarCard">
       <div className="dowRow">
@@ -38,11 +38,16 @@ export function MonthGrid({ weeks, openWeek, openDay, monthCellEvents, sameDay, 
                   >
                     <div className="dayNum">{cell.date.getDate()}</div>
                     <div className="miniList">
-                      {top.map((e) => (
-                        <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
-                          {eventLabel(e)}
-                        </div>
-                      ))}
+                      {top.map((e) => {
+                        const main = eventLabel(e);
+                        const sub = monthPeopleSummary ? monthPeopleSummary(e) : "";
+                        return (
+                          <div key={e.id} className="miniItem" style={{ color: e.color ?? "#111" }}>
+                            <div className="miniItemMain">{main}</div>
+                            {sub ? <div className="miniItemSub">{sub}</div> : null}
+                          </div>
+                        );
+                      })}
                       {rest > 0 ? <div className="more">+{rest}件</div> : null}
                     </div>
                   </button>

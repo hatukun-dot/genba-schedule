@@ -708,6 +708,16 @@ function AppInner() {
     return `人員: ${countText}`;
   }
 
+  function monthPeopleSummary(e) {
+    const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean);
+    const n = e.peopleCount ?? names.length;
+    if (!n || n <= 0) return "";
+    if (n <= 2 && names.length > 0) {
+      return names.join("、");
+    }
+    return `${n}名`;
+  }
+
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
     const dow = cell.date.getDay();
@@ -1685,6 +1695,7 @@ function AppInner() {
           todayYmd={todayYmd}
           weekdayClass={weekdayClass}
           eventLabel={eventLabel}
+          monthPeopleSummary={monthPeopleSummary}
         />
       </main>
 
@@ -1696,6 +1707,7 @@ function AppInner() {
         stableEventSort={stableEventSort}
         eventLabel={eventLabel}
         peopleLine={peopleLine}
+        sortEventsForDisplay={sortEventsForDisplay}
         closeWeekToMonth={closeWeekToMonth}
         prevWeek={prevWeek}
         nextWeek={nextWeek}

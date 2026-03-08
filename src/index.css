@@ -62,7 +62,8 @@ input, select { font: inherit; }
 .main { display: flex; justify-content: center; }
 
 .calendarCard {
-  width: min(720px, 100%);
+  /* PC では横幅を広げて1.5倍程度の情報量を確保 */
+  width: min(960px, 100%);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -188,15 +189,25 @@ input, select { font: inherit; }
 
 .miniItem {
   font-size: 10px;
-  line-height: 1.2;
+  line-height: 1.4;
+  text-align: left;
+  min-width: 0;
+  max-width: 100%;
+}
 
-  text-align: left;  /* ← 予定左揃え */
+.miniItemMain {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
 
-  min-width: 0;
-  max-width: 100%;
+.miniItemSub {
+  margin-top: 1px;
+  font-size: 9px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .more { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -482,8 +493,8 @@ input, select { font: inherit; }
   /* ★予定は必ず1行省略 */
   .miniItem {
     font-size: 8.0px;
-    line-height: 1.00;
-    letter-spacing: -0.07em; /* ほんの少しだけ詰める */
+    line-height: 1.10;
+    letter-spacing: -0.04em;
   }
 
   .chips { grid-template-columns: repeat(3, 1fr); }

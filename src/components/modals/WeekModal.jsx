@@ -10,6 +10,7 @@ export function WeekModal({
   stableEventSort,
   eventLabel,
   peopleLine,
+  sortEventsForDisplay,
   closeWeekToMonth,
   prevWeek,
   nextWeek,
@@ -41,7 +42,9 @@ export function WeekModal({
         <div className="modalBody" ref={weekBodyRef} onClick={onSurfaceClick}>
           <div className="eventList">
             {weekDays.map(({ wd, ymd }) => {
-              const list = (eventsByKey[ymd] || []).slice().sort(stableEventSort);
+              const list = sortEventsForDisplay
+                ? sortEventsForDisplay(eventsByKey[ymd] || [])
+                : (eventsByKey[ymd] || []).slice().sort(stableEventSort);
               const d = fromYmd(ymd);
               const dow = d.getDay();
               const isHoliday = isHolidayDate(d);
