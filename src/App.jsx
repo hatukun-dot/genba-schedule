@@ -713,19 +713,17 @@ function AppInner() {
 
   if (!n || n <= 0) return "";
 
-  // 応援・休みは人員（名前）表示
   if (e.task === "応援" || e.task === "休み") {
-    if (names.length > 0) return names.join("、");
-    return `${n}名`;
+    if (names.length > 0) return ` ${names.join("、")}`;
+    return ` ${n}名`;
   }
 
-  // 通常作業
   if (n === 1 && names.length > 0) {
-    return names[0];
+    return ` ${names[0]}`;
   }
 
   if (n >= 2) {
-    return `${n}名`;
+    return ` ${n}名`;
   }
 
   return "";
