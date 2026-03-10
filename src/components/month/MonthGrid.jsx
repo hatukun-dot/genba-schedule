@@ -31,7 +31,10 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                     onClick={() => openDay(key)}
                     title={key}
                   >
-                    <div className="dayNum">{cell.date.getDate()}</div>
+                    <div className="dayNum">
+                     <span>{cell.date.getDate()}</span>
+                     {rest > 0 ? <span className="more">他{rest}件</span> : null}
+                     </div>
                     <div className="miniList">
                       {top.map((e) => {
                         const main = eventLabel(e);
@@ -43,7 +46,6 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                           </div>
                         );
                       })}
-                      {rest > 0 ? <div className="more">+{rest}件</div> : null}
                     </div>
                   </button>
                 );

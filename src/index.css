@@ -153,7 +153,13 @@ input, select { font: inherit; }
     var(--panel2);
 }
 
-.dayNum { font-weight: 900; margin-bottom: 6px; }
+.dayNum {
+  font-weight: 900;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
 .miniList {
   display: grid;
