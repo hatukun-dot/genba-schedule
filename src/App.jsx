@@ -714,7 +714,7 @@ function AppInner() {
   if (!names.length) return "";
 
   // 応援・休みは人数に関係なく名前を表示
-  if (e.project === "応援" || e.project === "休み") {
+  if (project === "応援" || project === "休み") {
     return ` ${names.join("、")}`;
   }
 
