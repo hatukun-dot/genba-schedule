@@ -713,9 +713,10 @@ function AppInner() {
 
   if (!n || n <= 0) return "";
 
-  if (e.project === "応援" || e.project === "休み") {
-  return ` ${names.join("、")}`;
-}
+  // 応援・休みは人数に関係なく名前を返す
+  if ((e.project === "応援" || e.project === "休み") && names.length > 0) {
+    return ` ${names.join("、")}`;
+  }
 
   if (n === 1 && names.length > 0) {
     return ` ${names[0]}`;
