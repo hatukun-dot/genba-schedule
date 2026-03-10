@@ -710,21 +710,15 @@ function AppInner() {
   function monthPeopleSummary(e) {
   const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
 
-  if (!names.length) return "";
-
-  // 応援・休みは人数に関係なく名前を返す
+  // 応援・休みは人数に関係なく名前を表示
   if (e.project === "応援" || e.project === "休み") {
-    return ` ${names.join("、")}`;
+    if (names.length > 0) return ` ${names.join("、")}`;
+    return ""; // 名前が無ければ空
   }
 
   // 応援・休み以外
-  if (names.length === 1) {
-    return ` ${names[0]}`;
-  }
-
-  if (names.length >= 2) {
-    return ` ${names.length}名`;
-  }
+  if (names.length === 1) return ` ${names[0]}`;
+  if (names.length >= 2) return ` ${names.length}名`;
 
   return "";
 }
