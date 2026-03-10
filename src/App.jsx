@@ -708,15 +708,17 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
+  // peopleIds から名前を取得
   const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+
+  if (!names.length) return "";
 
   // 応援・休みは人数に関係なく名前を表示
   if (e.project === "応援" || e.project === "休み") {
-    if (names.length > 0) return ` ${names.join("、")}`;
-    return ""; // 名前が無ければ空
+    return ` ${names.join("、")}`;
   }
 
-  // 応援・休み以外
+  // それ以外
   if (names.length === 1) return ` ${names[0]}`;
   if (names.length >= 2) return ` ${names.length}名`;
 
