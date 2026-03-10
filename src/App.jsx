@@ -709,16 +709,17 @@ function AppInner() {
 
   function monthPeopleSummary(e) {
   const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean);
-  const n = e.peopleCount ?? names.length;
 
-  if (!n || n <= 0) return "";
+  if (!names.length) return "";
 
   // 応援・休みは人数に関係なく名前を返す
-  if ((e.project === "応援" || e.project === "休み") && names.length > 0) {
+  if (e.project === "応援" || e.project === "休み") {
     return ` ${names.join("、")}`;
   }
 
-  if (n === 1 && names.length > 0) {
+  const n = e.peopleCount ?? names.length;
+
+  if (n === 1) {
     return ` ${names[0]}`;
   }
 
