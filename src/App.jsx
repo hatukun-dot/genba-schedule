@@ -714,9 +714,8 @@ function AppInner() {
   if (!n || n <= 0) return "";
 
   if (e.task === "応援" || e.task === "休み") {
-    if (names.length > 0) return ` ${names.join("、")}`;
-    return ` ${n}名`;
-  }
+  return ` ${names.join("、")}`;
+}
 
   if (n === 1 && names.length > 0) {
     return ` ${names[0]}`;
