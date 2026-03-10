@@ -33,7 +33,7 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                   >
                     <div className="dayNum">
                      <span>{cell.date.getDate()}</span>
-                     {rest > 0 ? <span className="more">他{rest}件</span> : null}
+                     {rest > 0 ? <div className="more">他{rest}件</div> : null}
                      </div>
                     <div className="miniList">
                       {top.map((e) => {

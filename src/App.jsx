@@ -753,7 +753,7 @@ function AppInner() {
 
   function monthCellEvents(key) {
     const list = sortEventsForDisplay(eventsByKey[key] || []);
-    const top = list.slice(0, 4);
+    const top = list.slice(0, 6);
     const rest = list.length - top.length;
     return { top, rest };
   }
