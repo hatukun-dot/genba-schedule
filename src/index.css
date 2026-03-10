@@ -63,7 +63,7 @@ input, select { font: inherit; }
 .main { display: flex; justify-content: center; }
 
 .calendarCard {
-  width: min(1600px, 100%);
+  width: min(1800px, 100%);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
