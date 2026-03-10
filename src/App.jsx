@@ -710,17 +710,20 @@ function AppInner() {
   function monthPeopleSummary(e) {
   const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
 
-  // 応援・休みは人数に関係なく名前を表示
+  if (!names.length) return "";
+
+  // 応援・休みは必ず人員表示
   if (e.project === "応援" || e.project === "休み") {
-    if (names.length > 0) return ` ${names.join("、")}`;
-    return ""; // 名前が無ければ空
+    return ` ${names.join("、")}`;
   }
 
   // 応援・休み以外
-  if (names.length <= 2) return ` ${names[0]}`;
-  if (names.length >= 3) return ` ${names.length}名`;
+  if (names.length <= 2) {
+    return ` ${names.join("、")}`; // 1〜2人は人員表示
+  }
 
-  return "";
+  // 3人以上は人数表示
+  return ` ${names.length}名`;
 }
 
   function weekdayClass(cell) {
