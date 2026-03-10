@@ -708,7 +708,7 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-  const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean);
+  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
 
   if (!names.length) return "";
 
@@ -717,14 +717,13 @@ function AppInner() {
     return ` ${names.join("、")}`;
   }
 
-  const n = e.peopleCount ?? names.length;
-
-  if (n === 1) {
+  // 応援・休み以外
+  if (names.length === 1) {
     return ` ${names[0]}`;
   }
 
-  if (n >= 2) {
-    return ` ${n}名`;
+  if (names.length >= 2) {
+    return ` ${names.length}名`;
   }
 
   return "";
