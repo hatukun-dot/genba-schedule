@@ -717,8 +717,8 @@ function AppInner() {
   }
 
   // 応援・休み以外
-  if (names.length === 1) return ` ${names[0]}`;
-  if (names.length >= 2) return ` ${names.length}名`;
+  if (names.length <= 2) return ` ${names[0]}`;
+  if (names.length >= 3) return ` ${names.length}名`;
 
   return "";
 }
