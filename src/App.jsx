@@ -708,14 +708,26 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-    const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean);
-    const n = e.peopleCount ?? names.length;
-    if (!n || n <= 0) return "";
-    if (n <= 2 && names.length > 0) {
-      return `（${names.join("、")}）`;
-    }
+  const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean);
+  const n = e.peopleCount ?? names.length;
+
+  if (!n || n <= 0) return "";
+
+  if (e.task === "応援" || e.task === "休み") {
+    if (names.length > 0) return `（${names.join("、")}）`;
     return `（${n}名）`;
   }
+
+  if (n === 1 && names.length > 0) {
+    return `（${names[0]}）`;
+  }
+
+  if (n >= 2) {
+    return `（${n}名）`;
+  }
+
+  return "";
+}
 
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
@@ -741,7 +753,7 @@ function AppInner() {
 
   function monthCellEvents(key) {
     const list = sortEventsForDisplay(eventsByKey[key] || []);
-    const top = list.slice(0, 3);
+    const top = list.slice(0, 4);
     const rest = list.length - top.length;
     return { top, rest };
   }
