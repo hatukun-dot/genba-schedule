@@ -713,7 +713,7 @@ function AppInner() {
 
   if (!n || n <= 0) return "";
 
-  if (e.task === "応援" || e.task === "休み") {
+  if (e.project === "応援" || e.project === "休み") {
   return ` ${names.join("、")}`;
 }
 
