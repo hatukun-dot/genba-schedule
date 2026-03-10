@@ -713,7 +713,7 @@ function AppInner() {
   if (!names.length) return "";
 
   // 応援・休みは必ず人員表示
-  if (e.project === "応援" || e.project === "休み") {
+  if (e.projectid === "応援" || e.projectid === "休み") {
     // 例え人数が多くても名前を優先
     return ` ${names.join("、")}`;
   }
