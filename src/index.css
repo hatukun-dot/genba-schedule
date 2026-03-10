@@ -63,8 +63,7 @@ input, select { font: inherit; }
 .main { display: flex; justify-content: center; }
 
 .calendarCard {
-  /* PC では従来の約2倍の横幅を確保 */
-  width: min(1200px, 100%);
+  width: min(1600px, 100%);
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -72,7 +71,7 @@ input, select { font: inherit; }
   box-shadow: 0 10px 28px rgba(0,0,0,.08);
 }
 
-/* ▼ 曜日行：左に「週」列を足して 8列 */
+/* ▼ 曜日行*/
 .dowRow {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
@@ -86,36 +85,12 @@ input, select { font: inherit; }
   padding: 6px 0;
 }
 
-/* ▼ カレンダー本体：左に「週」列を足して 8列 */
+/* ▼ カレンダー本体*/
 .grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
   gap: 8px;
 }
-
-/* 週ボタンセル */
-.weekCell {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: #fff;
-  min-height: 74px;
-  padding: 10px 6px;
-  color: var(--text);
-  cursor: pointer;
-  text-align: center;
-  display: grid;
-  place-items: center;
-
-  min-width: 0; /* ← ここ重要 */
-  overflow: hidden;
-}
-.weekCell span {
-  display: inline-block;
-  font-size: 12px;
-  font-weight: 900;
-  opacity: .9;
-}
-.weekCell:active { transform: translateY(1px); }
 
 /* 日付セル */
 .cell {
@@ -209,7 +184,7 @@ input, select { font: inherit; }
 }
 
 .tbdCell {
-  width: calc(((100% - 7 * 8px - 46px) / 7) * 3 + 8px * 2);
+  width: calc(((100% - 6 * 8px) / 7) * 2 + 8px);
   /* 高さは通常の日付セルと同じ一行ぶん */
   min-height: 74px;
   border-radius: 14px;
