@@ -714,16 +714,16 @@ function AppInner() {
 
   // 応援・休みは必ず人員表示
   if (e.project === "応援" || e.project === "休み") {
+    // 例え人数が多くても名前を優先
     return ` ${names.join("、")}`;
   }
 
-  // 応援・休み以外
+  // その他プロジェクト
   if (names.length <= 2) {
     return ` ${names.join("、")}`; // 1〜2人は人員表示
   }
 
-  // 3人以上は人数表示
-  return ` ${names.length}名`;
+  return ` ${names.length}名`; // 3人以上は人数表示
 }
 
   function weekdayClass(cell) {
