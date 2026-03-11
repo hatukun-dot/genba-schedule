@@ -59,11 +59,11 @@ export function DayModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 現在のURLに「#modal」を付けて、戻るボタンの身代わりを作る
-    window.history.pushState(null, "", "#modal");
+    // 履歴を積むが、後で勝手に back() しない
+    window.history.pushState(null, "");
 
-    const handlePopState = (e) => {
-      // 戻るボタンが押されたら、強制的に1280に戻して閉じる
+    const handlePopState = () => {
+      // 戻るボタンが押された時だけ倍率を戻して閉じる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeDay();
     };
@@ -72,12 +72,9 @@ export function DayModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // UIボタン等で閉じられた時も1280に戻す
+      // UIボタン等で閉じられた時、確実に倍率を戻す
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      // もしURLに#modalが残っていたら、履歴を1つ戻してURLを綺麗にする
-      if (window.location.hash === "#modal") {
-        window.history.back();
-      }
+      // ここから history.back() を削除（UIボタンの邪魔をしない）
     };
   }, [open]);
 
