@@ -109,24 +109,39 @@ input, select { font: inherit; }
   padding-top: 28px;
 }
 
-/* index.css 105行目付近 */
+/* 105行目付近：日付エリア全体の配置を戻す */
 .cell.date .dayNum {
-  position: absolute; /* これで左上に固定 */
+  position: absolute;
   top: 8px;
   left: 8px;
-  right: 8px; /* これで右端までの幅を確保 */
+  right: 8px; /* 右端まで幅を広げる */
   margin: 0;
   display: flex;
-  justify-content: space-between; /* これで日付組と「他〇件」を左右に分ける */
+  justify-content: space-between; /* これで左右に分かれる */
   align-items: center;
-  pointer-events: none; /* 下のボタンのクリックを邪魔しない */
+  pointer-events: none; /* 予定のクリックを邪魔しない */
 }
 
-.more {
-  font-size: 10px; /* 少し小さくしてスッキリさせる */
-  color: var(--muted);
-  font-weight: normal;
+/* 左側のグループ（日付＋祝日名） */
+.dayNumLeft {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 祝日名のスタイル */
+.holidayName {
+  font-size: 9px;
+  font-weight: 400;
+  color: #b00020; /* 祝日の赤 */
   white-space: nowrap;
+}
+
+/* 他〇件のスタイル調整 */
+.more {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 !important; /* 余計な余白を消す */
 }
 
 .cell.date .miniList{
@@ -548,3 +563,23 @@ input, select { font: inherit; }
 /* 文字色も合わせたいなら */
 .modalBody .satDay { color: #0b57d0; }
 .modalBody .sunDay { color: #b00020; }
+
+/* 土曜日の日付を青くする */
+.cell.date.sat .dayNum span {
+  color: #0b57d0; 
+}
+
+/* 日曜日の日付を赤くする */
+.cell.date.sun .dayNum span {
+  color: #b00020;
+}
+
+/* 祝日の日付も赤くする（念のため上書き） */
+.cell.date.holiday .dayNum span {
+  color: #b00020 !important;
+}
+
+/* 祝日名の赤も統一 */
+.holidayName {
+  color: #b00020 !important;
+}

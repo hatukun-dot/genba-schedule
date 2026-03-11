@@ -4,7 +4,7 @@ import { fromYmd } from "./date";
 export function isHolidayDate(date) {
   if (!date) return false;
   try {
-    return Boolean(JapaneseHolidays.isHoliday(date));
+    return JapaneseHolidays.isHoliday(date);
   } catch {
     return false;
   }
