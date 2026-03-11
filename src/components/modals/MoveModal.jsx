@@ -21,27 +21,25 @@ export function MoveModal({
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
 
-    window.history.pushState({ modal: "move" }, "", window.location.href);
+    window.history.pushState({ modal: "move" }, "");
 
     const handlePopState = () => {
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMoveModal(); 
+      closeMoveModal();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-
-      if (window.history.state?.modal === "move") {
-        window.history.back();
-      }
-
       if (viewport) {
         viewport.setAttribute('content', 'width=1280');
       }
+      if (window.history.state?.modal === "move") {
+        window.history.back();
+      }
     };
-  }, [open, closeMoveModal]);
+  }, [open]);
 
   if (!open) return null;
 

@@ -29,27 +29,25 @@ export function MultiAddModal({
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
 
-    window.history.pushState({ modal: "multi" }, "", window.location.href);
+    window.history.pushState({ modal: "multi" }, "");
 
     const handlePopState = () => {
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMultiAdd(); 
+      closeMultiAdd();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-
-      if (window.history.state?.modal === "multi") {
-        window.history.back();
-      }
-
       if (viewport) {
         viewport.setAttribute('content', 'width=1280');
       }
+      if (window.history.state?.modal === "multi") {
+        window.history.back();
+      }
     };
-  }, [open, closeMultiAdd]);
+  }, [open]);
 
   if (!open) return null;
 
