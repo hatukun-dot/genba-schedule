@@ -175,10 +175,15 @@ input, select { font: inherit; }
   background: #f2f2f2; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
 }
 
-/* 祝日を最優先にする（!important で上書き） */
+/* 祝日の背景色を日曜日の設定と完全に統一する */
 .cell.date.holiday {
-  background: var(--sun) !important;
-  color: #b00020 !important;
+  background-color: var(--sun) !important; /* index.cssで定義されている薄ピンク */
+  color: #b00020 !important;              /* 文字色は赤 */
+}
+
+/* もし背景が重なって濃くなっている場合は、こちらでリセットされます */
+.cell.date.sun.holiday {
+  background-color: var(--sun) !important;
 }
 
 .cell.date.sat {
@@ -582,4 +587,16 @@ input, select { font: inherit; }
 /* 祝日名の赤も統一 */
 .holidayName {
   color: #b00020 !important;
+}
+
+/* 曜日の見出し（土曜日：左から6番目）を青に */
+.dowRow .dowCell:nth-child(6) {
+  color: #0b57d0;
+  font-weight: bold;
+}
+
+/* 曜日の見出し（日曜日：左から7番目）を赤に */
+.dowRow .dowCell:nth-child(7) {
+  color: #b00020;
+  font-weight: bold;
 }
