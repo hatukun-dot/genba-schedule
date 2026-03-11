@@ -708,29 +708,28 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-  // 1. 名前リストの作成
-  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+  // 1. 名前のリストを作成（念のため空白除去などのガードを入れる）
+  const names = (e.peopleIds || [])
+    .map(id => peopleNameById(id))
+    .filter(name => name && name.trim() !== ""); // 空文字を除外
+
   if (names.length === 0) return "";
 
-  // 2. 「応援」や「休み」という文字が入っているかチェック
-  // project だけでなく、title や label など、可能性のある場所をすべて探す
-  const checkText = `${e.project || ""} ${e.title || ""} ${e.label || ""}`;
-  
-  const isSpecial = checkText.includes("応援") || checkText.includes("休み");
+  // 2. プロジェクト名を取得（データがない場合は空文字にする）
+  const project = e.project || "";
 
-  // 3. 判定
-  if (isSpecial) {
-    // 応援・休みなら全員表示
+  // 3. 判定ロジック
+  // 「応援」または「休み」を含む場合
+  if (project.includes("応援") || project.includes("休み")) {
     return ` ${names.join("、")}`;
   }
 
+  // それ以外：2人以下なら名前、3人以上なら人数
   if (names.length <= 2) {
-    // 2人以下なら名前表示
     return ` ${names.join("、")}`;
+  } else {
+    return ` ${names.length}名`;
   }
-
-  // 3人以上は人数表示
-  return ` ${names.length}名`;
 }
 
   function weekdayClass(cell) {
