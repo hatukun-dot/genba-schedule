@@ -52,6 +52,7 @@ export function DayModal({
   openMultiAdd,
   addEvent,
   saveEditEvent,
+  onStartCopy,
 }) {
 
   useEffect(() => {
@@ -130,6 +131,9 @@ export function DayModal({
                           </button>
                           <button className="menuBtn" onClick={() => (openMoveModal(e.id), closeMenu())}>
                             移動
+                          </button>
+                          <button className="menuBtn" onClick={() => { onStartCopy(e); closeMenu(); }}>
+                            コピー
                           </button>
                           <button className="menuBtn" onClick={() => (softDeleteEvent(e.id), closeMenu())}>
                             削除

@@ -149,6 +149,7 @@ function AppInner() {
   const [projectInput, setProjectInput] = useState("");
   const [taskInput, setTaskInput] = useState("");
   const [note, setNote] = useState("");
+  const [copySourceEvent, setCopySourceEvent] = useState(null);
   const [peopleCount, setPeopleCount] = useState(null);
   const [selectedPeopleIds, setSelectedPeopleIds] = useState([]);
   const [peopleCountManual, setPeopleCountManual] = useState(false);
@@ -194,6 +195,7 @@ function AppInner() {
   function closeMultiAdd() {
     // ★キャンセル＝入力保持（フォームは触らない）
     setIsMultiAddOpen(false);
+    setCopySourceEvent(null);
   }
 
   function ymdInMultiMonth(ymd) {
@@ -942,69 +944,76 @@ function AppInner() {
   }
 
   async function addEventToMultipleDays() {
-    await guard(async () => {
-      clearError();
+  await guard(async () => {
+    clearError();
 
-      // ★バグ修正：stateに直代入してたのを廃止（ここで編集状態は解除）
-      setEditingEventId(null);
+    // ★バグ修正：stateに直代入してたのを廃止（ここで編集状態は解除）
+    setEditingEventId(null);
 
-      if (!canSave) return;
-      const ymds = buildSelectedYmdsForConfirm();
-      if (ymds.length === 0) return;
+    // コピー元がない時だけ、通常の入力チェック(canSave)を行う
+    if (!copySourceEvent && !canSave) return;
+    
+    const ymds = buildSelectedYmdsForConfirm();
+    if (ymds.length === 0) return;
 
-      const pid = await ensureProjectId();
-      if (!pid) {
-        pushError("現場（project）の作成/取得に失敗しました", "SupabaseのRLS/権限/接続を確認してください。");
+    // コピー元があればそこから取得、なければ現在の入力から取得
+    const pid = copySourceEvent ? copySourceEvent.project_id : await ensureProjectId();
+    if (!pid) {
+      pushError("現場（project）の作成/取得に失敗しました", "SupabaseのRLS/権限/接続を確認してください。");
+      return;
+    }
+    const tid = copySourceEvent ? copySourceEvent.task_id : await ensureTaskIdOrNull();
+    const now = new Date().toISOString();
+
+    // 人員の使用頻度更新（コピー時は元のデータの人員IDを使用）
+    const targetPeopleIds = copySourceEvent ? copySourceEvent.people_ids : selectedPeopleIds;
+    await bumpPeopleUsage(targetPeopleIds, ymds.length);
+
+    // まとめてinsertするとorder計算がズレるので、現状仕様どおり1日ずつ
+    for (const ymd of ymds) {
+      const dayList = (eventsByKey[ymd] || [])
+        .filter((e) => e.deletedAt == null && e.bucket !== "TBD" && e.date === ymd)
+        .slice()
+        .sort(stableEventSort);
+
+      const maxOrder = dayList.reduce((m, e) => Math.max(m, Number(e.order ?? 0)), -1);
+
+      const row = {
+        date: ymd,
+        bucket: null,
+        project_id: pid,
+        task_id: tid,
+        // copySourceEvent があればその内容、なければ現在の入力 state の値を使う
+        note: (copySourceEvent ? (copySourceEvent.note || "") : note).trim() || null,
+        people_count: copySourceEvent ? copySourceEvent.people_count : toDbPeopleCount(peopleCount),
+        people_ids: copySourceEvent ? copySourceEvent.people_ids : uniqNumArray(selectedPeopleIds),
+        color: copySourceEvent ? copySourceEvent.color : color,
+        order: maxOrder + 1,
+        created_at: now,
+        updated_at: now,
+        deleted_at: null,
+      };
+
+      const clean = { ...row };
+      delete clean.id;
+      delete clean.ID;
+
+      const { error } = await api.insertEvent(clean);
+      if (error) {
+        console.error("addEventToMultipleDays insert error", ymd, error);
+        pushError(`複数日追加に失敗しました（${ymd}）`, error?.message || String(error));
         return;
       }
-      const tid = await ensureTaskIdOrNull();
-      const now = new Date().toISOString();
 
-      await bumpPeopleUsage(selectedPeopleIds, ymds.length);
+      if (pid && tid) await bumpTaskUsage(pid, tid);
+    }
 
-      // まとめてinsertするとorder計算がズレるので、現状仕様どおり1日ずつ
-      for (const ymd of ymds) {
-        const dayList = (eventsByKey[ymd] || [])
-          .filter((e) => e.deletedAt == null && e.bucket !== "TBD" && e.date === ymd)
-          .slice()
-          .sort(stableEventSort);
-
-        const maxOrder = dayList.reduce((m, e) => Math.max(m, Number(e.order ?? 0)), -1);
-
-        const row = {
-          date: ymd,
-          bucket: null,
-          project_id: pid,
-          task_id: tid,
-          note: note.trim() || null,
-          people_count: toDbPeopleCount(peopleCount),
-          people_ids: uniqNumArray(selectedPeopleIds),
-          color: color,
-          order: maxOrder + 1,
-          created_at: now,
-          updated_at: now,
-          deleted_at: null,
-        };
-
-        const clean = { ...row };
-        delete clean.id;
-        delete clean.ID;
-
-        const { error } = await api.insertEvent(clean);
-        if (error) {
-          console.error("addEventToMultipleDays insert error", ymd, error);
-          pushError(`複数日追加に失敗しました（${ymd}）`, error?.message || String(error));
-          return;
-        }
-
-        if (pid && tid) await bumpTaskUsage(pid, tid);
-      }
-
-      setIsMultiAddOpen(false);
-      resetForm();
-      setReloadTick((x) => x + 1);
-    });
-  }
+    setIsMultiAddOpen(false);
+    resetForm();
+    setCopySourceEvent(null); // ★ここでもコピー状態をクリア
+    setReloadTick((x) => x + 1);
+  });
+}
 
   async function saveEditEvent() {
     await guard(async () => {
@@ -1797,6 +1806,10 @@ function AppInner() {
         openMultiAdd={openMultiAdd}
         addEvent={addEvent}
         saveEditEvent={saveEditEvent}
+        onStartCopy={(ev) => {
+        setCopySourceEvent(ev); // ステップ1で作ったstateに予定をセット
+        setIsMultiAddOpen(true); // 複数日選択モーダルを開く
+        }}
       />
 
       <MoveModal
