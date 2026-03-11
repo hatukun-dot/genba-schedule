@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+let isMoveProcessing = false;
 
 export function MoveModal({
   open,
@@ -15,21 +16,21 @@ export function MoveModal({
   
   useEffect(() => {
     if (!open) return;
-    // 履歴を積む
     window.history.pushState({ modal: "move" }, "");
 
     const handlePopstate = () => {
-      // 戻るボタンが押された：自分を閉じる（ズームはDayModalに任せているので触らない）
+      isMoveProcessing = true;
       closeMoveModal();
     };
 
     window.addEventListener("popstate", handlePopstate);
     return () => {
       window.removeEventListener("popstate", handlePopstate);
-      // UIボタンで閉じた場合：履歴が自分のものなら1つ戻す
-      if (window.history.state?.modal === "move") {
-        window.history.back();
+      
+      if (!isMoveProcessing) {
+        if (window.history.state?.modal === "move") window.history.back();
       }
+      isMoveProcessing = false;
     };
   }, [open]);
 

@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+let isMultiProcessing = false;
 
 export function MultiAddModal({
   open,
@@ -26,15 +27,18 @@ export function MultiAddModal({
     window.history.pushState({ modal: "multi" }, "");
 
     const handlePopstate = () => {
+      isMultiProcessing = true;
       closeMultiAdd();
     };
 
     window.addEventListener("popstate", handlePopstate);
     return () => {
       window.removeEventListener("popstate", handlePopstate);
-      if (window.history.state?.modal === "multi") {
-        window.history.back();
+      
+      if (!isMultiProcessing) {
+        if (window.history.state?.modal === "multi") window.history.back();
       }
+      isMultiProcessing = false;
     };
   }, [open]);
 

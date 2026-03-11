@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { norm } from "../../utils/id";
+let isMasterProcessing = false;
 
 export function MasterModal({
   open,
@@ -40,31 +41,26 @@ export function MasterModal({
   useEffect(() => {
     if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
-    
-    // 開いた瞬間にズーム
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 履歴を1つ積む
     window.history.pushState({ modal: "master" }, "");
 
     const handlePopstate = () => {
-      // スマホの戻るボタン：倍率を戻してから閉じる
+      isMasterProcessing = true; // 旗を立てる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeMaster();
     };
 
     window.addEventListener("popstate", handlePopstate);
-
     return () => {
       window.removeEventListener("popstate", handlePopstate);
       
-      // UIの「×」ボタンなどで閉じられた時
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      
-      // 履歴に自分の印があれば、1つ戻して掃除する
-      if (window.history.state?.modal === "master") {
-        window.history.back();
+      if (!isMasterProcessing) {
+        // UIボタン（×）で閉じた時だけここを通る
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        if (window.history.state?.modal === "master") window.history.back();
       }
+      isMasterProcessing = false; // 旗を下ろす
     };
   }, [open]);
   

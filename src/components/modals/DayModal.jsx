@@ -1,6 +1,7 @@
 import React, { useEffect } from "react"; // ← useEffect を追加
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
+let isDayProcessing = false;
 
 export function DayModal({
   open,
@@ -57,18 +58,16 @@ export function DayModal({
   useEffect(() => {
     if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
-    // 開いた時にズームする
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
     window.history.pushState({ modal: "day" }, "");
 
     const handlePopstate = () => {
-      // ★超重要ガード：上に「移動」や「マルチ」の要素が存在していたら、自分は閉じない
-      // (classNameは実際のHTMLに合わせて .move-modal や .multi-modal に変えてください)
+      // ガード：上にサブモーダル（移動・マルチ）があれば、自分は閉じない
       const isOverlaid = document.querySelector('.move-modal') || document.querySelector('.multi-modal');
-      if (isOverlaid) return; 
+      if (isOverlaid) return;
 
-      // 上に誰もいない時だけ、ズームを戻して閉じる
+      isDayProcessing = true; // 旗を立てる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeDay();
     };
@@ -76,11 +75,12 @@ export function DayModal({
     window.addEventListener("popstate", handlePopstate);
     return () => {
       window.removeEventListener("popstate", handlePopstate);
-      // 完全にこのモーダルが消える時（UIボタン含む）はズームを戻す
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      if (window.history.state?.modal === "day") {
-        window.history.back();
+      
+      if (!isDayProcessing) {
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        if (window.history.state?.modal === "day") window.history.back();
       }
+      isDayProcessing = false;
     };
   }, [open]);
 
