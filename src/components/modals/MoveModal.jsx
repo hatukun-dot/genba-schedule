@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-let isMoveProcessing = false;
 
 export function MoveModal({
   open,
@@ -15,23 +14,8 @@ export function MoveModal({
 }) {
   
   useEffect(() => {
-    if (!open) return;
-    window.history.pushState({ modal: "move" }, "");
-
-    const handlePopstate = () => {
-      isMoveProcessing = true;
-      closeMoveModal();
-    };
-
-    window.addEventListener("popstate", handlePopstate);
-    return () => {
-      window.removeEventListener("popstate", handlePopstate);
-      
-      if (!isMoveProcessing) {
-        if (window.history.state?.modal === "move") window.history.back();
-      }
-      isMoveProcessing = false;
-    };
+    // 履歴やズームの操作は一切不要
+    // 何も書かないか、useEffect自体を消してもOKです
   }, [open]);
 
   if (!open) return null;

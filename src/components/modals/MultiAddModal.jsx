@@ -1,5 +1,4 @@
 import React, { useEffect } from "react";
-let isMultiProcessing = false;
 
 export function MultiAddModal({
   open,
@@ -23,23 +22,8 @@ export function MultiAddModal({
 }) {
   
   useEffect(() => {
-    if (!open) return;
-    window.history.pushState({ modal: "multi" }, "");
-
-    const handlePopstate = () => {
-      isMultiProcessing = true;
-      closeMultiAdd();
-    };
-
-    window.addEventListener("popstate", handlePopstate);
-    return () => {
-      window.removeEventListener("popstate", handlePopstate);
-      
-      if (!isMultiProcessing) {
-        if (window.history.state?.modal === "multi") window.history.back();
-      }
-      isMultiProcessing = false;
-    };
+    // 履歴やズームの操作は一切不要
+    // 何も書かないか、useEffect自体を消してもOKです
   }, [open]);
 
   if (!open) return null;

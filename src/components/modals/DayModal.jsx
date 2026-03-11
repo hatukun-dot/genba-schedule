@@ -1,7 +1,6 @@
 import React, { useEffect } from "react"; // ← useEffect を追加
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
-let isDayProcessing = false;
 
 export function DayModal({
   open,
@@ -56,31 +55,17 @@ export function DayModal({
 }) {
 
   useEffect(() => {
-    if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "day" }, "");
+    if (open) {
+      // 開いた時にズーム
+      if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    }
 
-    const handlePopstate = () => {
-      // ガード：上にサブモーダル（移動・マルチ）があれば、自分は閉じない
-      const isOverlaid = document.querySelector('.move-modal') || document.querySelector('.multi-modal');
-      if (isOverlaid) return;
-
-      isDayProcessing = true; // 旗を立てる
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeDay();
-    };
-
-    window.addEventListener("popstate", handlePopstate);
+    // クリーンアップ関数（モーダルが閉じる時に必ず実行される）
     return () => {
-      window.removeEventListener("popstate", handlePopstate);
-      
-      if (!isDayProcessing) {
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        if (window.history.state?.modal === "day") window.history.back();
-      }
-      isDayProcessing = false;
+      // 閉じるときに1280pxに戻す
+      if (viewport) viewport.setAttribute('content', 'width=1280');
     };
   }, [open]);
 

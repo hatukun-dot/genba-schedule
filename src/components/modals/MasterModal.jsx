@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { norm } from "../../utils/id";
-let isMasterProcessing = false;
 
 export function MasterModal({
   open,
@@ -39,28 +38,17 @@ export function MasterModal({
 }) {
   
   useEffect(() => {
-    if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "master" }, "");
+    if (open) {
+      // 開いた時にズーム
+      if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    }
 
-    const handlePopstate = () => {
-      isMasterProcessing = true; // 旗を立てる
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMaster();
-    };
-
-    window.addEventListener("popstate", handlePopstate);
+    // クリーンアップ関数（モーダルが閉じる時に必ず実行される）
     return () => {
-      window.removeEventListener("popstate", handlePopstate);
-      
-      if (!isMasterProcessing) {
-        // UIボタン（×）で閉じた時だけここを通る
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        if (window.history.state?.modal === "master") window.history.back();
-      }
-      isMasterProcessing = false; // 旗を下ろす
+      // 閉じるときに1280pxに戻す
+      if (viewport) viewport.setAttribute('content', 'width=1280');
     };
   }, [open]);
   
