@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react"; // ← useEffect を追加
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
 
@@ -53,7 +53,7 @@ export function DayModal({
   addEvent,
   saveEditEvent,
 }) {
-  
+
   useEffect(() => {
     if (open) {
       // モーダルが開いた時にズームをリセット
