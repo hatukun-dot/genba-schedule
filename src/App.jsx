@@ -708,22 +708,28 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+  // 1. 名前のリストを作成（念のため空白除去などのガードを入れる）
+  const names = (e.peopleIds || [])
+    .map(id => peopleNameById(id))
+    .filter(name => name && name.trim() !== ""); // 空文字を除外
 
-  if (!names.length) return "";
+  if (names.length === 0) return "";
 
-  // 応援・休みは必ず人員表示
-  if (e.project === "応援" || e.project === "休み") {
-    // 例え人数が多くても名前を優先
+  // 2. プロジェクト名を取得（データがない場合は空文字にする）
+  const project = e.project || "";
+
+  // 3. 判定ロジック
+  // 「応援」または「休み」を含む場合
+  if (project.includes("応援") || project.includes("休み")) {
     return ` ${names.join("、")}`;
   }
 
-  // その他プロジェクト
+  // それ以外：2人以下なら名前、3人以上なら人数
   if (names.length <= 2) {
-    return ` ${names.join("、")}`; // 1〜2人は人員表示
+    return ` ${names.join("、")}`;
+  } else {
+    return ` ${names.length}名`;
   }
-
-  return ` ${names.length}名`; // 3人以上は人数表示
 }
 
   function weekdayClass(cell) {
