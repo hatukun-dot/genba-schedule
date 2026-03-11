@@ -55,36 +55,27 @@ export function DayModal({
 }) {
 
   useEffect(() => {
-    // viewportはifの外で取得しておくのが確実
+  if (open) {
     const viewport = document.querySelector('meta[name="viewport"]');
-
-    if (open) {
-      // 1. スマホ用倍率にする
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      }
-
-      // 2. 履歴にダミーを追加
-      window.history.pushState({ modalOpen: true }, "", window.location.href);
-
-      // 3. 戻るボタンの処理
-      const handlePopState = () => {
-        // 戻るボタンが押された際、ここでも1280に戻しておくと確実
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        closeDay(); // ← 名前を修正
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      // クリーンアップ
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        if (viewport) {
-          viewport.setAttribute('content', 'width=1280');
-        }
-      };
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
-  }, [open, closeDay]);
+
+    window.history.pushState({ modal: "day" }, "", window.location.href);
+
+    const handlePopState = () => {
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+      closeDay(); 
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+    };
+  }
+}, [open, closeDay]);
 
   if (!open || !selectedKey) return null;
 

@@ -22,30 +22,27 @@ export function MultiAddModal({
 }) {
   
   useEffect(() => {
-    if (open) {
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      }
-
-      window.history.pushState({ modal: "multi" }, "", window.location.href);
-
-      const handlePopState = () => {
-        // 戻るボタンで閉じるときも1280に戻す
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        closeMultiAdd(); // ← 名前を修正
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        if (viewport) {
-          viewport.setAttribute('content', 'width=1280');
-        }
-      };
+  if (open) {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
-  }, [open, closeMultiAdd]);
+
+    window.history.pushState({ modal: "multi" }, "", window.location.href);
+
+    const handlePopState = () => {
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+      closeMultiAdd(); 
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+    };
+  }
+}, [open, closeMultiAdd]);
 
   if (!open) return null;
 

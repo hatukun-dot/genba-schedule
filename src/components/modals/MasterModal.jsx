@@ -44,25 +44,30 @@ export function MasterModal({
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
 
-      // ブラウザ履歴にスタックを追加
+      // 履歴スタックに積む
       window.history.pushState({ modal: "master" }, "", window.location.href);
 
       const handlePopState = () => {
-        // 戻るボタンが押されたら1280に戻してから閉じる
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        closeMaster(); // ← 名前を修正
+        // 戻るボタンが押された瞬間にズームを解除
+        if (viewport) {
+          viewport.setAttribute('content', 'width=1280');
+        }
+        // 引数で受け取っている正しい関数名「closeMaster」を呼ぶ
+        closeMaster(); 
       };
 
       window.addEventListener("popstate", handlePopState);
 
       return () => {
         window.removeEventListener("popstate", handlePopState);
+        // 通常の「閉じる」ボタンで閉じた場合もズームを解除
         if (viewport) {
           viewport.setAttribute('content', 'width=1280');
         }
       };
     }
-  }, [open, closeMaster]); // ← 依存配列も修正
+    // 依存配列に正しい関数名を入れる
+  }, [open, closeMaster]);
 
   if (!open) return null;
 
