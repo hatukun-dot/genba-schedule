@@ -20,13 +20,7 @@ export function MoveModal({
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
     }
-
-    return () => {
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=1280');
-      }
-    };
+    // ズーム解除（width=1280）は行わない
   }, [open]);
 
   if (!open) return null;
