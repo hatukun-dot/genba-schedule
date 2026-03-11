@@ -18,10 +18,11 @@ export function MoveModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "move" }, "");
+    const currentPath = window.location.href;
+    window.history.pushState({ modalOpen: true }, "", currentPath);
 
     const handlePopState = () => {
-      // 戻るボタン：倍率は「そのまま」で、このモーダルだけ閉じる
+      // 戻るボタン：倍率は変えず、閉じるだけ
       closeMoveModal();
     };
 
@@ -29,8 +30,8 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // UIボタンで閉じた場合：履歴を消すが、倍率は変えない
-      if (window.history.state?.modal === "move") {
+      // 【重要】ここで 1280 へのリセットは絶対に書かない
+      if (window.history.state?.modalOpen) {
         window.history.back();
       }
     };

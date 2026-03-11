@@ -42,7 +42,8 @@ export function MasterModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "master" }, "");
+    const currentPath = window.location.href;
+    window.history.pushState({ modalOpen: true }, "", currentPath);
 
     const handlePopState = () => {
       if (viewport) viewport.setAttribute('content', 'width=1280');
@@ -54,12 +55,11 @@ export function MasterModal({
     return () => {
       window.removeEventListener("popstate", handlePopState);
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      if (window.history.state?.modal === "master") {
+      if (window.history.state?.modalOpen) {
         window.history.back();
       }
     };
   }, [open]);
-
   if (!open) return null;
 
   return (
