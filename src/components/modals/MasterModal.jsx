@@ -47,22 +47,21 @@ export function MasterModal({
     // 履歴を1つ積む
     window.history.pushState({ modal: "master" }, "");
 
-    const handlePopState = () => {
-      // ★スマホの戻るボタンが押された時：
-      // まず倍率を戻してから、モーダルを閉じる関数を呼ぶ
+    const handlePopstate = () => {
+      // スマホの戻るボタン：倍率を戻してから閉じる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeMaster();
     };
 
-    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("popstate", handlePopstate);
 
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("popstate", handlePopstate);
       
-      // UIボタン（保存や閉じる）で閉じられた場合：
+      // UIの「×」ボタンなどで閉じられた時
       if (viewport) viewport.setAttribute('content', 'width=1280');
       
-      // 履歴が残っていれば掃除（二重戻り防止のため、stateを確認）
+      // 履歴に自分の印があれば、1つ戻して掃除する
       if (window.history.state?.modal === "master") {
         window.history.back();
       }

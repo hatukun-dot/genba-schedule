@@ -57,26 +57,30 @@ export function DayModal({
   useEffect(() => {
     if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
+    // 開いた時にズームする
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
     window.history.pushState({ modal: "day" }, "");
 
-    const handlePopState = () => {
-      // ★重要：App.jsxで重なっている「移動」や「マルチ」が開いていたら無視する
-      // ※ document.querySelectorの中身は、各モーダルの実際の外枠のクラス名に合わせてください
-      const isSubModalOpen = document.querySelector('.move-modal') || document.querySelector('.multi-add-modal');
-      if (isSubModalOpen) return; 
+    const handlePopstate = () => {
+      // ★超重要ガード：上に「移動」や「マルチ」の要素が存在していたら、自分は閉じない
+      // (classNameは実際のHTMLに合わせて .move-modal や .multi-modal に変えてください)
+      const isOverlaid = document.querySelector('.move-modal') || document.querySelector('.multi-modal');
+      if (isOverlaid) return; 
 
+      // 上に誰もいない時だけ、ズームを戻して閉じる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeDay();
     };
 
-    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("popstate", handlePopstate);
     return () => {
-      window.removeEventListener("popstate", handlePopState);
-      // UIボタン等で「日付詳細」自体が閉じられる時だけ、1280に戻す
+      window.removeEventListener("popstate", handlePopstate);
+      // 完全にこのモーダルが消える時（UIボタン含む）はズームを戻す
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      if (window.history.state?.modal === "day") window.history.back();
+      if (window.history.state?.modal === "day") {
+        window.history.back();
+      }
     };
   }, [open]);
 

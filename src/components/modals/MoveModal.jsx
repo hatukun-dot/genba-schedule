@@ -15,23 +15,18 @@ export function MoveModal({
   
   useEffect(() => {
     if (!open) return;
-
-    // 履歴を1つ積む（識別子を "move" に設定）
+    // 履歴を積む
     window.history.pushState({ modal: "move" }, "");
 
-    const handlePopState = () => {
-      // スマホの戻るボタンが押された時
-      // ここで viewport を 1280 に戻さないことで、ズームを維持したまま移動モーダルだけ閉じる
+    const handlePopstate = () => {
+      // 戻るボタンが押された：自分を閉じる（ズームはDayModalに任せているので触らない）
       closeMoveModal();
     };
 
-    window.addEventListener("popstate", handlePopState);
-
+    window.addEventListener("popstate", handlePopstate);
     return () => {
-      window.removeEventListener("popstate", handlePopState);
-      
-      // UIボタン等で閉じられた時
-      // ここでもズーム操作は行わない（下の階層に任せる）
+      window.removeEventListener("popstate", handlePopstate);
+      // UIボタンで閉じた場合：履歴が自分のものなら1つ戻す
       if (window.history.state?.modal === "move") {
         window.history.back();
       }
