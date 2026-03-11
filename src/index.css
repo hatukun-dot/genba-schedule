@@ -75,7 +75,7 @@ input, select { font: inherit; }
 .dowRow {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 8px;
 }
 .dowCell {
@@ -89,7 +89,7 @@ input, select { font: inherit; }
 .grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr)); /* ← ここ重要 */
-  gap: 8px;
+  gap: 4px;
 }
 
 /* 日付セル */
@@ -109,12 +109,15 @@ input, select { font: inherit; }
   padding-top: 28px;
 }
 
-.cell.date .dayNum{
+.cell.date .dayNum {
   position: absolute;
   top: 10px;
   left: 8px;
+  right: 8px; /* ★ここを必ず指定して、右側の余白を作る */
   margin: 0;
   line-height: 1;
+  display: flex; /* JSX側でstyleを書くなら不要ですが、CSSにあると安心です */
+  align-items: center;
 }
 
 .cell.date .miniList{
@@ -140,6 +143,18 @@ input, select { font: inherit; }
 
 .cell.date.today {
   outline: 2px solid rgba(0,0,0,.20);
+}
+
+/* 火・木を薄いグレーに */
+.cell.date.tue,
+.cell.date.thu {
+  background: #f5f5f5; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
+}
+
+/* 祝日を最優先にする（!important で上書き） */
+.cell.date.holiday {
+  background: var(--sun) !important;
+  color: #b00020 !important;
 }
 
 .cell.date.sat {

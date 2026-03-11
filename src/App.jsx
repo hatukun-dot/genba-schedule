@@ -737,8 +737,20 @@ function AppInner() {
     if (cell.type !== "date") return "";
     const dow = cell.date.getDay();
     const isHoliday = isHolidayDate(cell.date);
-    if (dow === 0 || isHoliday) return "sun";
+
+    // 1. 祝日を最優先 (赤)
+    if (isHoliday) return "holiday";
+
+    // 2. 日曜 (赤)
+    if (dow === 0) return "sun";
+
+    // 3. 土曜 (青)
     if (dow === 6) return "sat";
+
+    // 4. 火曜・木曜 (グレー) ★ここを追加
+    if (dow === 2) return "tue";
+    if (dow === 4) return "thu";
+
     return "";
   }
 
