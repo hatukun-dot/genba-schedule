@@ -44,10 +44,13 @@ export function MasterModal({
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
 
-      window.history.pushState({ modal: "move" }, "", window.location.href);
+      // ブラウザ履歴にスタックを追加
+      window.history.pushState({ modal: "master" }, "", window.location.href);
 
       const handlePopState = () => {
-        closeMasterModal(); // ← ここをファイル内の閉じる関数名に合わせる
+        // 戻るボタンが押されたら1280に戻してから閉じる
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        closeMaster(); // ← 名前を修正
       };
 
       window.addEventListener("popstate", handlePopState);
@@ -59,7 +62,7 @@ export function MasterModal({
         }
       };
     }
-  }, [open, closeMove]);
+  }, [open, closeMaster]); // ← 依存配列も修正
 
   if (!open) return null;
 

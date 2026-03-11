@@ -31,7 +31,9 @@ export function MultiAddModal({
       window.history.pushState({ modal: "multi" }, "", window.location.href);
 
       const handlePopState = () => {
-        closeMultiAddModal(); // ← ここをファイル内の閉じる関数名に合わせる
+        // 戻るボタンで閉じるときも1280に戻す
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        closeMultiAdd(); // ← 名前を修正
       };
 
       window.addEventListener("popstate", handlePopState);

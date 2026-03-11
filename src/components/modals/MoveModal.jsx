@@ -23,7 +23,9 @@ export function MoveModal({
       window.history.pushState({ modal: "move" }, "", window.location.href);
 
       const handlePopState = () => {
-        closeMoveModal(); // ← ここをファイル内の閉じる関数名に合わせる
+        // 戻るボタンで閉じるときも1280に戻す
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        closeMoveModal(); 
       };
 
       window.addEventListener("popstate", handlePopState);
@@ -35,8 +37,7 @@ export function MoveModal({
         }
       };
     }
-  }, [open, closeMove]);
-
+  }, [open, closeMoveModal]); // ← ここを closeMoveModal に修正
   if (!open) return null;
 
   return (
