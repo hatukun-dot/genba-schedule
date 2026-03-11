@@ -1,6 +1,6 @@
 import React from "react";
 import { TbdRow } from "./TbdRow";
-import { isHolidayDate } from "../utils/holiday";
+import { isHolidayDate } from "../../utils/holiday";
 
 export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
   return (
@@ -32,7 +32,7 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                     onClick={() => openDay(key)}
                     title={key}
                   >
-                    <div className="dayNum" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                    <div className="dayNum" style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative' }}>
                     {/* 左側：日付 */}
                     <span>{cell.date.getDate()}</span>
 
