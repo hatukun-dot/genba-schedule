@@ -55,40 +55,36 @@ export function DayModal({
 }) {
 
   useEffect(() => {
-    if (open) {
-      // 1. viewport の切り替え
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      }
-
-      // 2. 履歴にダミーを追加（戻るボタン対策）
-      window.history.pushState(null, "", window.location.href);
-
-      // 3. 戻るボタン（popstate）が押された時の処理
-      const handlePopState = () => {
-        closeDay(); // モーダルを閉じる関数
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      // クリーンアップ処理
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        
-        // モーダルが（保存ボタンなどで）自ら閉じた場合、履歴が余るので一つ戻す
-        if (window.history.state !== null) {
-          // 意図的にページ移動させないよう注意が必要ですが、
-          // シンプルに履歴を整理したい場合はここを調整します
-        }
-
-        if (viewport) {
-          viewport.setAttribute('content', 'width=1280');
-        }
-      };
+  if (open) {
+    // 1. モーダルを開いた瞬間にズームを等倍に戻す
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
-  }, [open, closeDay]); // closeDay を依存関係に追加
-  
+
+    // 2. ブラウザ履歴にダミーを追加（戻るボタン対策）
+    window.history.pushState({ modalOpen: true }, "", window.location.href);
+
+    // 3. 戻るボタンが押された時の処理
+    const handlePopState = (e) => {
+      // モーダルを閉じる関数を呼ぶ（ファイルごとにcloseMasterなど適切な関数名に）
+      closeDay(); 
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    // クリーンアップ処理（モーダルが閉じる時に実行）
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      
+      // viewportを元の1280px表示に戻す
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
+      }
+    };
+  }
+}, [open, closeDay]); // 各モーダルの閉じる関数を依存関係に含める場合は追加
+
   if (!open || !selectedKey) return null;
 
   return (

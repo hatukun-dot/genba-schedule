@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { norm } from "../../utils/id";
 
 export function MasterModal({
@@ -36,6 +36,31 @@ export function MasterModal({
   masterBodyRef,
   masterEditAnchorRef,
 }) {
+  
+  useEffect(() => {
+    if (open) {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+
+      window.history.pushState({ modal: "move" }, "", window.location.href);
+
+      const handlePopState = () => {
+        closeMove(); // ← ここをファイル内の閉じる関数名に合わせる
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+        if (viewport) {
+          viewport.setAttribute('content', 'width=1280');
+        }
+      };
+    }
+  }, [open, closeMove]);
+
   if (!open) return null;
 
   return (

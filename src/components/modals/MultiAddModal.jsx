@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 export function MultiAddModal({
   open,
@@ -20,6 +20,31 @@ export function MultiAddModal({
   addEventToMultipleDays,
   onSurfaceClick,
 }) {
+  
+  useEffect(() => {
+    if (open) {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+
+      window.history.pushState({ modal: "multi" }, "", window.location.href);
+
+      const handlePopState = () => {
+        closeMultiAdd(); // ← ここをファイル内の閉じる関数名に合わせる
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+        if (viewport) {
+          viewport.setAttribute('content', 'width=1280');
+        }
+      };
+    }
+  }, [open, closeMultiAdd]);
+
   if (!open) return null;
 
   const selectedCount = buildSelectedYmdsForConfirm().length;
