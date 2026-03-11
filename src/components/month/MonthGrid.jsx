@@ -1,5 +1,6 @@
 import React from "react";
 import { TbdRow } from "./TbdRow";
+import { isHolidayDate } from "../utils/holiday";
 
 export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
   return (
