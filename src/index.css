@@ -177,15 +177,16 @@ input, select { font: inherit; }
 
 /* 祝日の背景色を日曜日の設定と完全に統一する */
 .cell.date.holiday {
-  background-color: var(--sun) !important; /* index.cssで定義されている薄ピンク */
-  color: #b00020 !important;              /* 文字色は赤 */
+  background-color: var(--sun) !important;
+  background-image: none !important; /* ★ここを追加！グラデーションを消す */
+  color: #b00020 !important;
 }
 
 /* もし背景が重なって濃くなっている場合は、こちらでリセットされます */
 .cell.date.sun.holiday {
   background-color: var(--sun) !important;
+  background-image: none !important; /* ★ここを追加！ */
 }
-
 .cell.date.sat {
   background:
     linear-gradient(0deg, rgba(227,242,253,.55), rgba(227,242,253,.55)),
