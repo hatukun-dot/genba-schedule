@@ -1808,6 +1808,7 @@ function AppInner() {
         saveEditEvent={saveEditEvent}
         onStartCopy={(ev) => {
         setCopySourceEvent(ev); // ステップ1で作ったstateに予定をセット
+        setMultiMode("multi");
         setIsMultiAddOpen(true); // 複数日選択モーダルを開く
         }}
       />
@@ -1840,7 +1841,7 @@ function AppInner() {
         isSelectedInMultiModal={isSelectedInMultiModal}
         onPickDayInMultiModal={onPickDayInMultiModal}
         buildSelectedYmdsForConfirm={buildSelectedYmdsForConfirm}
-        canSave={canSave}
+        canSave={canSave || !!copySourceEvent}
         closeMultiAdd={closeMultiAdd}
         addEventToMultipleDays={addEventToMultipleDays}
         onSurfaceClick={onSurfaceClick}

@@ -19,6 +19,7 @@ export function MultiAddModal({
   closeMultiAdd,
   addEventToMultipleDays,
   onSurfaceClick,
+  isCopy,
 }) {
   
   useEffect(() => {
@@ -37,7 +38,7 @@ export function MultiAddModal({
           <button className="btn" onClick={closeMultiAdd}>
             ← 戻る
           </button>
-          <div className="modalTitle">複数日に追加</div>
+          <div className="modalTitle">{isCopy ? "複数日にコピー" : "複数日に追加"}</div>
           <div style={{ width: 72 }} />
         </div>
 
@@ -154,7 +155,7 @@ export function MultiAddModal({
               キャンセル
             </button>
             <button className="btn primary" disabled={!canSave || selectedCount === 0} onClick={addEventToMultipleDays}>
-              追加
+             {isCopy ? "コピー" : "追加"}
             </button>
           </div>
         </div>
