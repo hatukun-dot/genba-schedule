@@ -26,9 +26,10 @@ export function MultiAddModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, null);
+    window.history.pushState(null, "", "#multi");
 
     const handlePopState = () => {
+      // 重要：倍率は変えずに閉じるだけ
       closeMultiAdd();
     };
 
@@ -36,6 +37,9 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      if (window.location.hash === "#multi") {
+        window.history.back();
+      }
     };
   }, [open]);
 

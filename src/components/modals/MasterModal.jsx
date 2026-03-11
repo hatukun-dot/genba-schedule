@@ -42,7 +42,7 @@ export function MasterModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, null);
+    window.history.pushState(null, "", "#master");
 
     const handlePopState = () => {
       if (viewport) viewport.setAttribute('content', 'width=1280');
@@ -54,6 +54,9 @@ export function MasterModal({
     return () => {
       window.removeEventListener("popstate", handlePopState);
       if (viewport) viewport.setAttribute('content', 'width=1280');
+      if (window.location.hash === "#master") {
+        window.history.back();
+      }
     };
   }, [open]);
   

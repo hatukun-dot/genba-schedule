@@ -18,10 +18,10 @@ export function MoveModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, null);
+    window.history.pushState(null, "", "#move");
 
     const handlePopState = () => {
-      // ズーム解除（1280）は絶対に書かない
+      // 重要：ここでは 1280 へのリセットを書かない（倍率維持）
       closeMoveModal();
     };
 
@@ -29,7 +29,10 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // ここでも1280に戻すコードは書かない
+      // ここでも1280リセットは書かない
+      if (window.location.hash === "#move") {
+        window.history.back();
+      }
     };
   }, [open]);
 
