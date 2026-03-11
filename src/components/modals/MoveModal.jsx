@@ -18,10 +18,10 @@ export function MoveModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "move" }, "");
+    window.history.pushState(null, null);
 
     const handlePopState = () => {
-      // 戻るボタン：ズームは「解除せず」閉じる
+      // ズーム解除（1280）は絶対に書かない
       closeMoveModal();
     };
 
@@ -29,10 +29,7 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // UIボタンで閉じても1280には戻さない（下の画面を崩さない）
-      if (window.history.state?.modal === "move") {
-        window.history.back();
-      }
+      // ここでも1280に戻すコードは書かない
     };
   }, [open]);
 

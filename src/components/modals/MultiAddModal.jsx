@@ -26,7 +26,7 @@ export function MultiAddModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState({ modal: "multi" }, "");
+    window.history.pushState(null, null);
 
     const handlePopState = () => {
       closeMultiAdd();
@@ -36,9 +36,6 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (window.history.state?.modal === "multi") {
-        window.history.back();
-      }
     };
   }, [open]);
 
