@@ -22,13 +22,30 @@ export function MultiAddModal({
 }) {
   
   useEffect(() => {
-    if (open) {
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      }
+    if (!open) return;
+
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
-    // ズーム解除（width=1280）は行わない
+
+    // マルチ追加モーダル用の履歴を積む
+    window.history.pushState({ modal: "multi" }, "");
+
+    const handlePopState = () => {
+      // 戻るボタン：ズームはそのまま、モーダルだけ閉じる
+      closeMultiAdd();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+
+      if (window.history.state?.modal === "multi") {
+        window.history.back();
+      }
+    };
   }, [open]);
 
   if (!open) return null;

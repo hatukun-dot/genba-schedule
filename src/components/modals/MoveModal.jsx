@@ -14,13 +14,31 @@ export function MoveModal({
 }) {
   
   useEffect(() => {
-    if (open) {
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-      }
+    if (!open) return;
+
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
-    // ズーム解除（width=1280）は行わない
+
+    // 移動モーダル用の履歴を積む
+    window.history.pushState({ modal: "move" }, "");
+
+    const handlePopState = () => {
+      // 戻るボタン：ズームはそのまま、モーダルだけ閉じる
+      closeMoveModal();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      
+      // UIボタンで閉じた場合、積んだ履歴を消す（ズーム解除は書かない）
+      if (window.history.state?.modal === "move") {
+        window.history.back();
+      }
+    };
   }, [open]);
 
   if (!open) return null;
