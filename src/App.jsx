@@ -1842,6 +1842,7 @@ function AppInner() {
         onPickDayInMultiModal={onPickDayInMultiModal}
         buildSelectedYmdsForConfirm={buildSelectedYmdsForConfirm}
         canSave={canSave || !!copySourceEvent}
+        isCopy={!!copySourceEvent}
         closeMultiAdd={closeMultiAdd}
         addEventToMultipleDays={addEventToMultipleDays}
         onSurfaceClick={onSurfaceClick}
