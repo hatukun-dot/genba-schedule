@@ -157,7 +157,7 @@ input, select { font: inherit; }
 /* 火・木を薄いグレーに */
 .cell.date.tue,
 .cell.date.thu {
-  background: #f5f5f5; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
+  background: #f2f2f2; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
 }
 
 /* 祝日を最優先にする（!important で上書き） */
