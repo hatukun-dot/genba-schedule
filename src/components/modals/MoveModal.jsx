@@ -14,32 +14,21 @@ export function MoveModal({
 }) {
   
   useEffect(() => {
-    if (!open) return;
-
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    if (open) {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
     }
 
-    window.history.pushState({ modal: "move" }, "");
-
-    const handlePopState = () => {
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMoveModal();
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
     return () => {
-      window.removeEventListener("popstate", handlePopState);
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-
-      if (window.history.state?.modal === "move") {
-        window.history.back();
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
       }
     };
   }, [open]);
-  
+
   if (!open) return null;
 
   return (

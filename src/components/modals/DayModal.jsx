@@ -55,32 +55,19 @@ export function DayModal({
 }) {
 
   useEffect(() => {
-    if (!open) return;
-
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    // 開いた時
+    if (open) {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
     }
 
-    // 履歴を積む
-    window.history.pushState({ modal: "day" }, "");
-
-    const handlePopState = (e) => {
-      // スマホの戻るボタン押下時
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeDay();
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
+    // 閉じる時（またはページ遷移時）に必ず実行される
     return () => {
-      window.removeEventListener("popstate", handlePopState);
-      // ズームを確実にデフォルトへ
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      
-      // UIの「閉じる」ボタン等で閉じた場合、積んだ履歴が残っていたら1つ消す
-      if (window.history.state?.modal === "day") {
-        window.history.back();
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
       }
     };
   }, [open]);

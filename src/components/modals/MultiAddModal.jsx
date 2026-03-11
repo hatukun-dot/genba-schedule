@@ -22,28 +22,17 @@ export function MultiAddModal({
 }) {
   
   useEffect(() => {
-    if (!open) return;
-
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    if (open) {
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
     }
 
-    window.history.pushState({ modal: "multi" }, "");
-
-    const handlePopState = () => {
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMultiAdd();
-    };
-
-    window.addEventListener("popstate", handlePopState);
-
     return () => {
-      window.removeEventListener("popstate", handlePopState);
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-
-      if (window.history.state?.modal === "multi") {
-        window.history.back();
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
       }
     };
   }, [open]);
