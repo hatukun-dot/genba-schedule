@@ -23,7 +23,7 @@ export function MoveModal({
       window.history.pushState({ modal: "move" }, "", window.location.href);
 
       const handlePopState = () => {
-        closeMove(); // ← ここをファイル内の閉じる関数名に合わせる
+        closeMoveModal(); // ← ここをファイル内の閉じる関数名に合わせる
       };
 
       window.addEventListener("popstate", handlePopState);

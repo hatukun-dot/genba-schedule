@@ -47,7 +47,7 @@ export function MasterModal({
       window.history.pushState({ modal: "move" }, "", window.location.href);
 
       const handlePopState = () => {
-        closeMove(); // ← ここをファイル内の閉じる関数名に合わせる
+        closeMasterModal(); // ← ここをファイル内の閉じる関数名に合わせる
       };
 
       window.addEventListener("popstate", handlePopState);

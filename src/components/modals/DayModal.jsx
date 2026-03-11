@@ -68,7 +68,7 @@ export function DayModal({
     // 3. 戻るボタンが押された時の処理
     const handlePopState = (e) => {
       // モーダルを閉じる関数を呼ぶ（ファイルごとにcloseMasterなど適切な関数名に）
-      closeDay(); 
+      closeDayModal(); 
     };
 
     window.addEventListener("popstate", handlePopState);
