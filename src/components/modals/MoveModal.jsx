@@ -15,13 +15,13 @@ export function MoveModal({
   
   useEffect(() => {
     if (!open) return;
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, "");
+    // 履歴を1つ積む（識別子を "move" に設定）
+    window.history.pushState({ modal: "move" }, "");
 
     const handlePopState = () => {
-      // 倍率はそのままでモーダルだけ閉じる
+      // スマホの戻るボタンが押された時
+      // ここで viewport を 1280 に戻さないことで、ズームを維持したまま移動モーダルだけ閉じる
       closeMoveModal();
     };
 
@@ -29,7 +29,12 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // 1280に戻す処理は書かない
+      
+      // UIボタン等で閉じられた時
+      // ここでもズーム操作は行わない（下の階層に任せる）
+      if (window.history.state?.modal === "move") {
+        window.history.back();
+      }
     };
   }, [open]);
 

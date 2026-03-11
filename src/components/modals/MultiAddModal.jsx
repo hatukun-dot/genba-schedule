@@ -23,12 +23,12 @@ export function MultiAddModal({
   
   useEffect(() => {
     if (!open) return;
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, "");
+    // 履歴を1つ積む（識別子を "multi" に設定）
+    window.history.pushState({ modal: "multi" }, "");
 
     const handlePopState = () => {
+      // スマホの戻るボタンが押された時
       closeMultiAdd();
     };
 
@@ -36,6 +36,11 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      
+      // UIボタン等で閉じられた時
+      if (window.history.state?.modal === "multi") {
+        window.history.back();
+      }
     };
   }, [open]);
 

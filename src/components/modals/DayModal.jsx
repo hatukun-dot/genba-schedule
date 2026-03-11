@@ -59,22 +59,24 @@ export function DayModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 履歴を積むが、後で勝手に back() しない
-    window.history.pushState(null, "");
+    window.history.pushState({ modal: "day" }, "");
 
     const handlePopState = () => {
-      // 戻るボタンが押された時だけ倍率を戻して閉じる
+      // ★重要：App.jsxで重なっている「移動」や「マルチ」が開いていたら無視する
+      // ※ document.querySelectorの中身は、各モーダルの実際の外枠のクラス名に合わせてください
+      const isSubModalOpen = document.querySelector('.move-modal') || document.querySelector('.multi-add-modal');
+      if (isSubModalOpen) return; 
+
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeDay();
     };
 
     window.addEventListener("popstate", handlePopState);
-
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // UIボタン等で閉じられた時、確実に倍率を戻す
+      // UIボタン等で「日付詳細」自体が閉じられる時だけ、1280に戻す
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      // ここから history.back() を削除（UIボタンの邪魔をしない）
+      if (window.history.state?.modal === "day") window.history.back();
     };
   }, [open]);
 

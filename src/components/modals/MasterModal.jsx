@@ -40,11 +40,16 @@ export function MasterModal({
   useEffect(() => {
     if (!open) return;
     const viewport = document.querySelector('meta[name="viewport"]');
+    
+    // 開いた瞬間にズーム
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, "");
+    // 履歴を1つ積む
+    window.history.pushState({ modal: "master" }, "");
 
     const handlePopState = () => {
+      // ★スマホの戻るボタンが押された時：
+      // まず倍率を戻してから、モーダルを閉じる関数を呼ぶ
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeMaster();
     };
@@ -53,7 +58,14 @@ export function MasterModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      
+      // UIボタン（保存や閉じる）で閉じられた場合：
       if (viewport) viewport.setAttribute('content', 'width=1280');
+      
+      // 履歴が残っていれば掃除（二重戻り防止のため、stateを確認）
+      if (window.history.state?.modal === "master") {
+        window.history.back();
+      }
     };
   }, [open]);
   
