@@ -59,11 +59,11 @@ export function DayModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // モーダルが開いたことを履歴に登録（ページ移動させないため）
-    window.history.pushState(null, null, null);
+    // ツールが閉じるのを防ぐための「身代わり」履歴
+    window.history.pushState({ modal: "day" }, "");
 
     const handlePopState = () => {
-      // 戻るボタンが押されたらここが実行される
+      // 戻るボタンが押された時：倍率を1280にしてモーダルを閉じる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeDay();
     };
@@ -72,10 +72,15 @@ export function DayModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // UIのボタン等で閉じた場合、確実に倍率をリセット
+      // UIの×ボタン等で閉じた場合、倍率を1280に戻す
       if (viewport) viewport.setAttribute('content', 'width=1280');
+      // UIボタンで閉じた場合は、積んだ履歴を1つ消す
+      if (window.history.state?.modal === "day") {
+        window.history.back();
+      }
     };
   }, [open]);
+  
   if (!open || !selectedKey) return null;
 
   return (

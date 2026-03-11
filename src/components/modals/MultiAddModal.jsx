@@ -26,7 +26,7 @@ export function MultiAddModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    window.history.pushState(null, null, null);
+    window.history.pushState({ modal: "multi" }, "");
 
     const handlePopState = () => {
       closeMultiAdd();
@@ -36,7 +36,9 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // ここに 1280 に戻すコードは書かない
+      if (window.history.state?.modal === "multi") {
+        window.history.back();
+      }
     };
   }, [open]);
 
