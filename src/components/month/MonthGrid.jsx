@@ -38,7 +38,6 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                     <div className="miniList">
                       {top.map((e) => {
                         const main = eventLabel(e);
-                        console.log("届いているデータの中身:", e);
                         const people = monthPeopleSummary ? monthPeopleSummary(e) : "";
                         const line = people ? `${main}${people}` : main;
                         return (

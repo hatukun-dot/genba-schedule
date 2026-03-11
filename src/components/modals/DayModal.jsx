@@ -53,6 +53,18 @@ export function DayModal({
   addEvent,
   saveEditEvent,
 }) {
+  
+  useEffect(() => {
+    if (open) {
+      // モーダルが開いた時にズームをリセット
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        // scaleを1.0に強制することでズームアウトさせる
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      }
+    }
+  }, [open]);
+
   if (!open || !selectedKey) return null;
 
   return (

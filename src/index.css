@@ -441,12 +441,49 @@ input, select { font: inherit; }
 }
 
 /* --- スマホ最適化：はみ出し防止を強める --- */
-@media (max-width: 520px) {
-  .title { font-size: 34px; }
+/* タッチデバイス（スマホ・タブレット）を検知 */
+@media (pointer: coarse) {
+  
+  /* チップ（現場・作業）を3列にする */
+  .modalBody .chips {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 12px !important;
+    max-height: none !important; /* スマホではスクロールさせず全部見せる */
+  }
 
-  .app { padding: 16px 12px 80px; }
+  /* チップ自体の文字サイズと押しやすさを調整 */
+  .modalBody .chip {
+    min-height: 54px !important; /* PC版より高さを出して押しやすく */
+    font-size: 20px !important;  /* 縮小されても読めるデカ文字 */
+    font-weight: 800 !important;
+    white-space: normal !important; /* 長い名前は2行にする */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px !important;
+  }
 
-  .chips { grid-template-columns: repeat(3, 1fr); }
+  /* 人員ボックス（2列を維持しつつ文字を大きく） */
+  .modalBody .peopleBoxFixed {
+    grid-template-columns: repeat(2, 1fr) !important; /* ご要望通り2列を死守 */
+    gap: 10px !important;
+  }
+
+  .modalBody .personRowFixed {
+    padding: 14px 8px !important; /* タップ範囲を確保 */
+    font-size: 20px !important;   /* 人名もデカ文字 */
+  }
+
+  /* チェックボックス自体も大きく */
+  .modalBody .personRowFixed input[type="checkbox"] {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* フォーム全体の文字サイズも底上げ */
+  .modalBody .label { font-size: 22px !important; }
+  .modalBody .input { font-size: 20px !important; padding: 16px !important; }
+  .modalBody .sectionTitle { font-size: 26px !important; }
 }
 /* 月ヘッダー上段：タイトル左、…右 */
 .headerTopRow{
