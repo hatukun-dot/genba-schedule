@@ -18,11 +18,10 @@ export function MoveModal({
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    const currentPath = window.location.href;
-    window.history.pushState({ modalOpen: true }, "", currentPath);
+    window.history.pushState({ modal: "move" }, "");
 
     const handlePopState = () => {
-      // 戻るボタン：倍率は変えず、閉じるだけ
+      // 戻るボタン：ズームは「解除せず」閉じる
       closeMoveModal();
     };
 
@@ -30,8 +29,8 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // 【重要】ここで 1280 へのリセットは絶対に書かない
-      if (window.history.state?.modalOpen) {
+      // UIボタンで閉じても1280には戻さない（下の画面を崩さない）
+      if (window.history.state?.modal === "move") {
         window.history.back();
       }
     };
