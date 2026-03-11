@@ -22,7 +22,8 @@ export function MultiAddModal({
 }) {
   
   useEffect(() => {
-  if (open) {
+    if (!open) return;
+
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
@@ -39,10 +40,16 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (viewport) viewport.setAttribute('content', 'width=1280');
+
+      if (window.history.state?.modal === "multi") {
+        window.history.back();
+      }
+
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
+      }
     };
-  }
-}, [open, closeMultiAdd]);
+  }, [open, closeMultiAdd]);
 
   if (!open) return null;
 

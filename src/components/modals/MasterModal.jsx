@@ -38,35 +38,39 @@ export function MasterModal({
 }) {
   
   useEffect(() => {
-    if (open) {
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) {
-        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    if (!open) return;
+
+    const viewport = document.querySelector('meta[name="viewport"]');
+    
+    // 1. 開いた瞬間にズーム
+    if (viewport) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    }
+
+    // 2. 履歴を積む
+    window.history.pushState({ modal: "master" }, "");
+
+    const handlePopState = (e) => {
+      // 戻るボタンが押された時
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+      closeMaster();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      
+      // 3. 【重要】「閉じるボタン」で閉じた場合、積んだ履歴が残ってしまうので消す
+      // これをしないと、次に別の場所で戻るボタンを押した時に変な挙動になります
+      if (window.history.state?.modal === "master") {
+        window.history.back();
       }
 
-      // 履歴スタックに積む
-      window.history.pushState({ modal: "master" }, "", window.location.href);
-
-      const handlePopState = () => {
-        // 戻るボタンが押された瞬間にズームを解除
-        if (viewport) {
-          viewport.setAttribute('content', 'width=1280');
-        }
-        // 引数で受け取っている正しい関数名「closeMaster」を呼ぶ
-        closeMaster(); 
-      };
-
-      window.addEventListener("popstate", handlePopState);
-
-      return () => {
-        window.removeEventListener("popstate", handlePopState);
-        // 通常の「閉じる」ボタンで閉じた場合もズームを解除
-        if (viewport) {
-          viewport.setAttribute('content', 'width=1280');
-        }
-      };
-    }
-    // 依存配列に正しい関数名を入れる
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
+      }
+    };
   }, [open, closeMaster]);
 
   if (!open) return null;

@@ -14,17 +14,16 @@ export function MoveModal({
 }) {
   
   useEffect(() => {
-  if (open) {
+    if (!open) return;
+
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
 
-    // 履歴を追加
     window.history.pushState({ modal: "move" }, "", window.location.href);
 
     const handlePopState = () => {
-      // 戻るボタンが押されたら即座にズームを戻して閉じる
       if (viewport) viewport.setAttribute('content', 'width=1280');
       closeMoveModal(); 
     };
@@ -33,11 +32,16 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // 通常のボタンクリックで閉じた場合もここを通る
-      if (viewport) viewport.setAttribute('content', 'width=1280');
+
+      if (window.history.state?.modal === "move") {
+        window.history.back();
+      }
+
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
+      }
     };
-  }
-}, [open, closeMoveModal]); // ← ここを closeMoveModal に修正
+  }, [open, closeMoveModal]);
 
   if (!open) return null;
 

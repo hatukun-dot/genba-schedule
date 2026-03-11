@@ -55,12 +55,14 @@ export function DayModal({
 }) {
 
   useEffect(() => {
-  if (open) {
+    if (!open) return;
+
     const viewport = document.querySelector('meta[name="viewport"]');
     if (viewport) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }
 
+    // 履歴にこのモーダル固有の識別子を積む
     window.history.pushState({ modal: "day" }, "", window.location.href);
 
     const handlePopState = () => {
@@ -72,10 +74,17 @@ export function DayModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (viewport) viewport.setAttribute('content', 'width=1280');
+      
+      // ボタン操作で閉じた場合、積んだ履歴を1つ戻してスタックを綺麗にする
+      if (window.history.state?.modal === "day") {
+        window.history.back();
+      }
+
+      if (viewport) {
+        viewport.setAttribute('content', 'width=1280');
+      }
     };
-  }
-}, [open, closeDay]);
+  }, [open, closeDay]);
 
   if (!open || !selectedKey) return null;
 
