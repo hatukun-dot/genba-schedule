@@ -32,27 +32,25 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                     onClick={() => openDay(key)}
                     title={key}
                   >
-                    <div className="dayNum" style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative' }}>
-                    {/* 左側：日付 */}
-                    <span>{cell.date.getDate()}</span>
+                    <div className="dayNum">
+                     {/* 左側：日付と祝日名 */}
+                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                     <span>{cell.date.getDate()}</span>
+                     {/* 判定を Boolean ではなく関数そのものの戻り値（名前）に変更 */}
+                     {isHolidayDate(cell.date) && typeof isHolidayDate(cell.date) === 'string' && (
+                     <span style={{ fontSize: '9px', fontWeight: '400', color: '#b00020', whiteSpace: 'nowrap' }}>
+                     {isHolidayDate(cell.date)}
+                     </span>
+                     )}
+                     </div>
 
-                    {/* 左側：祝日名（日付のすぐ横に配置） */}
-                    {isHolidayDate(cell.date) && (
-                    <span style={{ fontSize: '9px', fontWeight: '400', marginLeft: '4px' }}>
-                    {isHolidayDate(cell.date)}
-                    </span>
-                    )}
-
-                    {/* ★ スペーサー：これより右側の要素を右端に押し出す */}
-                    <div style={{ flexGrow: 1 }} />
-
-                    {/* 右側：他〇件 */}
-                    {rest > 0 ? (
-                    <div className="more" style={{ margin: 0, whiteSpace: 'nowrap' }}>
-                    他{rest}件
-                    </div>
-                    ) : null}
-                    </div>
+                     {/* 右側：他〇件（自動的に右へ行くように CSS で調整します） */}
+                     {rest > 0 && (
+                     <div className="more">
+                     他{rest}件
+                     </div>
+                     )}
+                     </div>
 
                     <div className="miniList">
                       {top.map((e) => {

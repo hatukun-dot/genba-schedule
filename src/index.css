@@ -109,15 +109,24 @@ input, select { font: inherit; }
   padding-top: 28px;
 }
 
+/* index.css 105行目付近 */
 .cell.date .dayNum {
-  position: absolute;
-  top: 10px;
+  position: absolute; /* これで左上に固定 */
+  top: 8px;
   left: 8px;
-  right: 8px; /* ★ここを必ず指定して、右側の余白を作る */
+  right: 8px; /* これで右端までの幅を確保 */
   margin: 0;
-  line-height: 1;
-  display: flex; /* JSX側でstyleを書くなら不要ですが、CSSにあると安心です */
+  display: flex;
+  justify-content: space-between; /* これで日付組と「他〇件」を左右に分ける */
   align-items: center;
+  pointer-events: none; /* 下のボタンのクリックを邪魔しない */
+}
+
+.more {
+  font-size: 10px; /* 少し小さくしてスッキリさせる */
+  color: var(--muted);
+  font-weight: normal;
+  white-space: nowrap;
 }
 
 .cell.date .miniList{
