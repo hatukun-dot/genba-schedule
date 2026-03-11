@@ -56,15 +56,39 @@ export function DayModal({
 
   useEffect(() => {
     if (open) {
-      // モーダルが開いた時にズームをリセット
+      // 1. viewport の切り替え
       const viewport = document.querySelector('meta[name="viewport"]');
       if (viewport) {
-        // scaleを1.0に強制することでズームアウトさせる
         viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
       }
-    }
-  }, [open]);
 
+      // 2. 履歴にダミーを追加（戻るボタン対策）
+      window.history.pushState(null, "", window.location.href);
+
+      // 3. 戻るボタン（popstate）が押された時の処理
+      const handlePopState = () => {
+        closeDay(); // モーダルを閉じる関数
+      };
+
+      window.addEventListener("popstate", handlePopState);
+
+      // クリーンアップ処理
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+        
+        // モーダルが（保存ボタンなどで）自ら閉じた場合、履歴が余るので一つ戻す
+        if (window.history.state !== null) {
+          // 意図的にページ移動させないよう注意が必要ですが、
+          // シンプルに履歴を整理したい場合はここを調整します
+        }
+
+        if (viewport) {
+          viewport.setAttribute('content', 'width=1280');
+        }
+      };
+    }
+  }, [open, closeDay]); // closeDay を依存関係に追加
+  
   if (!open || !selectedKey) return null;
 
   return (
