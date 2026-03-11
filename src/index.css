@@ -187,12 +187,6 @@ input, select { font: inherit; }
   background: var(--sun) !important; /* 背景を日曜の基本色1つだけに固定 */
 }
 
-/* 3. ★念のため：前後の月（outside）の祝日も色が混ざらないようにする */
-.cell.date.outside.holiday {
-  background-color: #fff !important; /* 枠外の祝日は白か薄いグレーに飛ばす */
-  opacity: 0.5;
-}
-
 .cell.date.sat {
   background:
     linear-gradient(0deg, rgba(227,242,253,.55), rgba(227,242,253,.55)),
