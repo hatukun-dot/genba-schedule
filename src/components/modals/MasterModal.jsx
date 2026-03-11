@@ -39,31 +39,21 @@ export function MasterModal({
   
   useEffect(() => {
     if (!open) return;
-
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    }
+    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 履歴を積む
-    window.history.pushState({ modal: "master" }, "");
+    window.history.pushState(null, null, null);
 
     const handlePopState = () => {
-      // 戻るボタンで閉じるときは、まずズームを解除
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMaster(); 
+      closeMaster();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // どの閉じ方でも最後は 1280 に戻す
       if (viewport) viewport.setAttribute('content', 'width=1280');
-
-      if (window.history.state?.modal === "master") {
-        window.history.back();
-      }
     };
   }, [open]);
 

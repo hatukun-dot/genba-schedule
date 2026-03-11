@@ -15,17 +15,13 @@ export function MoveModal({
   
   useEffect(() => {
     if (!open) return;
-
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    }
+    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 移動モーダル用の履歴を積む
-    window.history.pushState({ modal: "move" }, "");
+    window.history.pushState(null, null, null);
 
     const handlePopState = () => {
-      // 戻るボタン：ズームはそのまま、モーダルだけ閉じる
+      // ズームは維持して閉じるだけ
       closeMoveModal();
     };
 
@@ -33,11 +29,7 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      
-      // UIボタンで閉じた場合、積んだ履歴を消す（ズーム解除は書かない）
-      if (window.history.state?.modal === "move") {
-        window.history.back();
-      }
+      // ここに 1280 に戻すコードは書かない
     };
   }, [open]);
 

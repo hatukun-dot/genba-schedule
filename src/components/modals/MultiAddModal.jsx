@@ -23,17 +23,12 @@ export function MultiAddModal({
   
   useEffect(() => {
     if (!open) return;
-
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    }
+    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // マルチ追加モーダル用の履歴を積む
-    window.history.pushState({ modal: "multi" }, "");
+    window.history.pushState(null, null, null);
 
     const handlePopState = () => {
-      // 戻るボタン：ズームはそのまま、モーダルだけ閉じる
       closeMultiAdd();
     };
 
@@ -41,10 +36,7 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-
-      if (window.history.state?.modal === "multi") {
-        window.history.back();
-      }
+      // ここに 1280 に戻すコードは書かない
     };
   }, [open]);
 

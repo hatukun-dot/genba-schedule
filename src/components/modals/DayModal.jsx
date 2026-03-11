@@ -56,34 +56,26 @@ export function DayModal({
 
   useEffect(() => {
     if (!open) return;
-
     const viewport = document.querySelector('meta[name="viewport"]');
-    if (viewport) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    }
+    if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
 
-    // 履歴を積む
-    window.history.pushState({ modal: "day" }, "");
+    // モーダルが開いたことを履歴に登録（ページ移動させないため）
+    window.history.pushState(null, null, null);
 
     const handlePopState = () => {
-      // 戻るボタンで閉じるときは、まずズームを解除
+      // 戻るボタンが押されたらここが実行される
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeDay(); 
+      closeDay();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      // どの閉じ方でも最後は 1280 に戻す
+      // UIのボタン等で閉じた場合、確実に倍率をリセット
       if (viewport) viewport.setAttribute('content', 'width=1280');
-
-      if (window.history.state?.modal === "day") {
-        window.history.back();
-      }
     };
   }, [open]);
-
   if (!open || !selectedKey) return null;
 
   return (
