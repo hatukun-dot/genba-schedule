@@ -54,44 +54,60 @@ export function MultiAddModal({
           </div>
 
           <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-            <button className="btn" disabled={multiMode === "range"} onClick={() => setMultiMode("range")}>
-              範囲選択
-            </button>
-            <button className="btn" disabled={multiMode === "multi"} onClick={() => setMultiMode("multi")}>
-              複数選択
-            </button>
-            <button className="btn" disabled={multiMode === "weekday"} onClick={() => setMultiMode("weekday")}>
-              曜日選択
-            </button>
+            {[
+           { id: "range", label: "範囲選択" },
+           { id: "multi", label: "複数選択" },
+           { id: "weekday", label: "曜日選択" },
+           ].map((m) => {
+           const isSel = multiMode === m.id;
+           return (
+           <button
+           key={m.id}
+           className="btn"
+           onClick={() => setMultiMode(m.id)}
+           style={{
+           background: isSel ? "rgba(0,0,0,.85)" : "rgba(0,0,0,.05)",
+           color: isSel ? "#fff" : "rgba(0,0,0,.50)",
+           border: "none",
+           fontWeight: isSel ? "800" : "500",
+           }}
+           >
+           {m.label}
+           </button>
+           );
+           })}
           </div>
 
           {multiMode === "range" && <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 10 }}>開始日→終了日をタップ（※土日除外は固定）</div>}
           {multiMode === "multi" && <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 10 }}>日付をタップして追加/解除</div>}
           {multiMode === "weekday" && (
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-              {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
-                const on = weekdaySelected.has(dow);
-                return (
-                  <label key={dow} style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                    <input
-                      type="checkbox"
-                      checked={on}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setWeekdaySelected((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(dow);
-                          else next.delete(dow);
-                          return next;
-                        });
-                      }}
-                    />
-                    <span>{weekdayLabelJP(dow)}</span>
-                  </label>
-                );
-              })}
-            </div>
-          )}
+           <div style={{ display: "flex", justifyContent: "space-between", gap: 4, marginBottom: 15, padding: "0 2px" }}>
+           {[1, 2, 3, 4, 5, 6, 0].map((dow) => {
+           const on = weekdaySelected.has(dow);
+           return (
+           <button
+           key={dow}
+           onClick={() => {
+           setWeekdaySelected((prev) => {
+              const next = new Set(prev);
+              if (on) next.delete(dow); else next.add(dow);
+              return next;
+             });
+             }}
+           style={{
+            width: 42, height: 42, borderRadius: 10, border: "1px solid",
+            borderColor: on ? "rgba(0,0,0,.85)" : "rgba(0,0,0,.10)",
+            background: on ? "rgba(0,0,0,.85)" : "rgba(255,255,255,.90)",
+            color: on ? "#fff" : "rgba(0,0,0,.60)",
+            fontSize: 13, fontWeight: "800", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+           }}
+           >
+           {weekdayLabelJP(dow).replace("曜日", "")}
+           </button>
+           );
+           })}
+           </div>
+           )}
 
           <div
             style={{
