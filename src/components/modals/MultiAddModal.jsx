@@ -40,9 +40,8 @@ export function MultiAddModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (viewport) {
-        viewport.setAttribute('content', 'width=1280');
-      }
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+
       if (window.history.state?.modal === "multi") {
         window.history.back();
       }

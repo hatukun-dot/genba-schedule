@@ -32,15 +32,14 @@ export function MoveModal({
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      if (viewport) {
-        viewport.setAttribute('content', 'width=1280');
-      }
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+
       if (window.history.state?.modal === "move") {
         window.history.back();
       }
     };
   }, [open]);
-
+  
   if (!open) return null;
 
   return (

@@ -66,28 +66,24 @@ export function DayModal({
     window.history.pushState({ modal: "day" }, "");
 
     const handlePopState = (e) => {
-      // 戻るボタンの時はここを通る
+      // スマホの戻るボタン押下時
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeDay(); 
+      closeDay();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
+      // ズームを確実にデフォルトへ
+      if (viewport) viewport.setAttribute('content', 'width=1280');
       
-      // ズームを確実に1280（デフォルト）に戻す
-      if (viewport) {
-        viewport.setAttribute('content', 'width=1280');
-      }
-
-      // 「×」ボタンや「保存」で閉じた場合のみ、積んだ履歴を消す
-      // popstate経由で閉じた場合は、既に履歴は戻っているので何もしない
+      // UIの「閉じる」ボタン等で閉じた場合、積んだ履歴が残っていたら1つ消す
       if (window.history.state?.modal === "day") {
         window.history.back();
       }
     };
-  }, [open]); // closeDayを依存から外すとより安定します
+  }, [open]);
 
   if (!open || !selectedKey) return null;
 

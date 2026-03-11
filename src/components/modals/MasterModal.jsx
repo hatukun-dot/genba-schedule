@@ -49,17 +49,14 @@ export function MasterModal({
 
     const handlePopState = () => {
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      closeMaster(); 
+      closeMaster();
     };
 
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       window.removeEventListener("popstate", handlePopState);
-      
-      if (viewport) {
-        viewport.setAttribute('content', 'width=1280');
-      }
+      if (viewport) viewport.setAttribute('content', 'width=1280');
 
       if (window.history.state?.modal === "master") {
         window.history.back();
