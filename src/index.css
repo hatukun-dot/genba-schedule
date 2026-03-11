@@ -175,18 +175,24 @@ input, select { font: inherit; }
   background: #f2f2f2; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
 }
 
-/* 祝日の背景色を日曜日の設定と完全に統一する */
+/* 1. 祝日単体の設定 */
 .cell.date.holiday {
   background-color: var(--sun) !important;
-  background-image: none !important; /* ★ここを追加！グラデーションを消す */
+  background-image: none !important;
   color: #b00020 !important;
 }
 
-/* もし背景が重なって濃くなっている場合は、こちらでリセットされます */
+/* 2. ★重要：日曜と祝日が重なった時に色が濃くなるのを防ぐ */
 .cell.date.sun.holiday {
-  background-color: var(--sun) !important;
-  background-image: none !important; /* ★ここを追加！ */
+  background: var(--sun) !important; /* 背景を日曜の基本色1つだけに固定 */
 }
+
+/* 3. ★念のため：前後の月（outside）の祝日も色が混ざらないようにする */
+.cell.date.outside.holiday {
+  background-color: #fff !important; /* 枠外の祝日は白か薄いグレーに飛ばす */
+  opacity: 0.5;
+}
+
 .cell.date.sat {
   background:
     linear-gradient(0deg, rgba(227,242,253,.55), rgba(227,242,253,.55)),
