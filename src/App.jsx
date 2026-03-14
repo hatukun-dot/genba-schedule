@@ -709,30 +709,29 @@ function AppInner() {
     return `人員: ${countText}`;
   }
 
-  // ① monthPeopleSummary の修正
-function monthPeopleSummary(e) {
+  function monthPeopleSummary(e) {
     // 1. 名前リストを作成
-  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
-  if (names.length === 0) return "";
+    const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+    if (names.length === 0) return "";
 
     // 2. IDではなく名前で判定（IDはDB依存でずれるため）
-  const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
-  const isSpecial = projectName === "休み" || projectName === "応援";
+    const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
+    const isSpecial = projectName === "休み" || projectName === "応援";
 
     // 3. 判定ロジック
-  if (isSpecial) {
+    if (isSpecial) {
       // 休み・応援なら何人でも全員表示
-    return ` ${names.join("、")}`;
-  }
+      return ` ${names.join("、")}`;
+    }
 
-  if (names.length <= 2) {
+    if (names.length <= 2) {
       // 通常現場で2人以下なら名前
-    return ` ${names.join("、")}`;
-  }
+      return ` ${names.join("、")}`;
+    }
 
     // それ以外（3人以上）は人数
-  return ` ${names.length}名`;
-}
+    return ` ${names.length}名`;
+  }
 
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
@@ -789,7 +788,7 @@ function monthPeopleSummary(e) {
     }
   }, [selectedPeopleIds, peopleCountManual]);
 
-  // スマホの戻るボタンでモーダルを閉じる
+  // スマホの戻るボタンでモーダルを閉じる（UIボタンと同様にviewportもリセット）
   useEffect(() => {
     const anyOpen = isDayOpen || isWeekOpen || isMasterOpen || isMoveOpen || isMultiAddOpen;
 
@@ -798,6 +797,10 @@ function monthPeopleSummary(e) {
     }
 
     const handlePop = () => {
+      // UIボタンと同様にviewportをリセット
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) viewport.setAttribute('content', 'width=1280');
+
       if (isMoveOpen) { closeMoveModal(); return; }
       if (isMultiAddOpen) { closeMultiAdd(); return; }
       if (isDayOpen) { closeDay(); return; }
