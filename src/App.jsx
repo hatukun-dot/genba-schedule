@@ -797,12 +797,18 @@ function AppInner() {
     }
 
     const handlePop = () => {
-      // UIボタンと同様にviewportをリセット
       const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) viewport.setAttribute('content', 'width=1280');
 
-      if (isMoveOpen) { closeMoveModal(); return; }
-      if (isMultiAddOpen) { closeMultiAdd(); return; }
+      if (isMoveOpen) {
+        // DayModalに戻るのでviewportはそのまま維持
+        closeMoveModal(); return;
+      }
+      if (isMultiAddOpen) {
+        // DayModalに戻るのでviewportはそのまま維持
+        closeMultiAdd(); return;
+      }
+      // 月画面に戻る場合はズーム解除
+      if (viewport) viewport.setAttribute('content', 'width=1280');
       if (isDayOpen) { closeDay(); return; }
       if (isWeekOpen) { closeWeek(); return; }
       if (isMasterOpen) { closeMaster(); return; }
