@@ -709,29 +709,30 @@ function AppInner() {
     return `人員: ${countText}`;
   }
 
-  function monthPeopleSummary(e) {
+  // ① monthPeopleSummary の修正
+function monthPeopleSummary(e) {
     // 1. 名前リストを作成
-    const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
-    if (names.length === 0) return "";
+  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+  if (names.length === 0) return "";
 
     // 2. IDではなく名前で判定（IDはDB依存でずれるため）
-    const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
-    const isSpecial = projectName === "休み" || projectName === "応援";
+  const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
+  const isSpecial = projectName === "休み" || projectName === "応援";
 
     // 3. 判定ロジック
-    if (isSpecial) {
+  if (isSpecial) {
       // 休み・応援なら何人でも全員表示
-      return ` ${names.join("、")}`;
-    }
+    return ` ${names.join("、")}`;
+  }
 
-    if (names.length <= 2) {
+  if (names.length <= 2) {
       // 通常現場で2人以下なら名前
-      return ` ${names.join("、")}`;
-    }
+    return ` ${names.join("、")}`;
+  }
 
     // それ以外（3人以上）は人数
-    return ` ${names.length}名`;
-  }
+  return ` ${names.length}名`;
+}
 
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
