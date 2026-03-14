@@ -710,28 +710,28 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-  // 1. 名前リストを作成
-  const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
-  if (names.length === 0) return "";
+    // 1. 名前リストを作成
+    const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
+    if (names.length === 0) return "";
 
-  // 2. IDで判定する (3:休み, 2:応援)
-  // コンソールの結果から、projectId という項目に数字が入っていることが分かりました
-  const isSpecial = e.projectId === 3 || e.projectId === 2;
+    // 2. IDではなく名前で判定（IDはDB依存でずれるため）
+    const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
+    const isSpecial = projectName === "休み" || projectName === "応援";
 
-  // 3. 判定ロジック
-  if (isSpecial) {
-    // 休み・応援なら全員表示
-    return ` ${names.join("、")}`;
+    // 3. 判定ロジック
+    if (isSpecial) {
+      // 休み・応援なら何人でも全員表示
+      return ` ${names.join("、")}`;
+    }
+
+    if (names.length <= 2) {
+      // 通常現場で2人以下なら名前
+      return ` ${names.join("、")}`;
+    }
+
+    // それ以外（3人以上）は人数
+    return ` ${names.length}名`;
   }
-
-  if (names.length <= 2) {
-    // 通常現場で2人以下なら名前
-    return ` ${names.join("、")}`;
-  }
-
-  // それ以外（3人以上）は人数
-  return ` ${names.length}名`;
-}
 
   function weekdayClass(cell) {
     if (cell.type !== "date") return "";
@@ -787,6 +787,26 @@ function AppInner() {
       });
     }
   }, [selectedPeopleIds, peopleCountManual]);
+
+  // スマホの戻るボタンでモーダルを閉じる
+  useEffect(() => {
+    const anyOpen = isDayOpen || isWeekOpen || isMasterOpen || isMoveOpen || isMultiAddOpen;
+
+    if (anyOpen) {
+      history.pushState({ modal: true }, "");
+    }
+
+    const handlePop = () => {
+      if (isMoveOpen) { closeMoveModal(); return; }
+      if (isMultiAddOpen) { closeMultiAdd(); return; }
+      if (isDayOpen) { closeDay(); return; }
+      if (isWeekOpen) { closeWeek(); return; }
+      if (isMasterOpen) { closeMaster(); return; }
+    };
+
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen]);
 
   // ============================================================
   // ===== ここから「書き込み」もSupabaseに統一 =====

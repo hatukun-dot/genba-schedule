@@ -175,16 +175,19 @@ input, select { font: inherit; }
   background: #f2f2f2; /* お好みで #f2f2f2 くらいまで濃くしてもOK */
 }
 
-/* 1. 祝日単体の設定 */
+/* 1. 祝日単体の設定（日曜と同じ半透明グラデーションで色を統一） */
 .cell.date.holiday {
-  background-color: var(--sun) !important;
-  background-image: none !important;
+  background:
+    linear-gradient(0deg, rgba(252,228,236,.55), rgba(252,228,236,.55)),
+    var(--panel2) !important;
   color: #b00020 !important;
 }
 
-/* 2. ★重要：日曜と祝日が重なった時に色が濃くなるのを防ぐ */
+/* 2. 日曜と祝日が重なった時も同じグラデーションで固定（二重にならない） */
 .cell.date.sun.holiday {
-  background: var(--sun) !important; /* 背景を日曜の基本色1つだけに固定 */
+  background:
+    linear-gradient(0deg, rgba(252,228,236,.55), rgba(252,228,236,.55)),
+    var(--panel2) !important;
 }
 
 .cell.date.sat {
