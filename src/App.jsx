@@ -830,6 +830,37 @@ function AppInner() {
   }, []);
 
   // ============================================================
+  // スワイプで月・日を切り替える
+  // ============================================================
+  const swipeRef = useRef(null);
+
+  function handleTouchStart(e) {
+    swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+
+  function handleTouchEnd(e) {
+    if (!swipeRef.current) return;
+    const dx = e.changedTouches[0].clientX - swipeRef.current.x;
+    const dy = e.changedTouches[0].clientY - swipeRef.current.y;
+    swipeRef.current = null;
+
+    // 縦スクロールが主体の場合は無視
+    if (Math.abs(dy) > Math.abs(dx)) return;
+    // 横移動が50px未満は無視
+    if (Math.abs(dx) < 50) return;
+
+    if (isDayOpen) {
+      // 日付画面：左スワイプ=次の日、右スワイプ=前の日
+      if (dx < 0) goNextDay();
+      else goPrevDay();
+    } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
+      // 月画面：左スワイプ=次の月、右スワイプ=前の月
+      if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
+      else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
+    }
+  }
+
+  // ============================================================
   // ===== ここから「書き込み」もSupabaseに統一 =====
   // ============================================================
 
@@ -1680,7 +1711,7 @@ function AppInner() {
   }, [selectedKey]);
 
   return (
-    <div className="app">
+    <div className="app" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       <style>{`
           .cell.outside{
             opacity: .45;
