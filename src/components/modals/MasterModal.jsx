@@ -39,17 +39,13 @@ export function MasterModal({
   
   useEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
 
     if (open) {
-      // 開いた時にズーム
-      if (viewport) viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    } else {
+      viewport.setAttribute('content', 'width=1280');
     }
-
-    // クリーンアップ関数（モーダルが閉じる時に必ず実行される）
-    return () => {
-      // 閉じるときに1280pxに戻す
-      if (viewport) viewport.setAttribute('content', 'width=1280');
-    };
   }, [open]);
   
   if (!open) return null;
