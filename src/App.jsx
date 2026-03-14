@@ -789,27 +789,37 @@ function AppInner() {
   }, [selectedPeopleIds, peopleCountManual]);
 
   // スマホの戻るボタンでモーダルを閉じる
-  // 設計：各モーダルが「開いた時」に1回だけpushStateし、
-  //        popstateが発火したら「最前面のモーダルを1つ閉じる」だけにする
+  // refで常に最新のstate/関数を参照することでクロージャ問題を回避
+  const modalRef = useRef({});
+  modalRef.current = {
+    isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen,
+    closeDay, closeWeek, closeMaster, closeMoveModal, closeMultiAdd,
+  };
 
-  // モーダルが開いた時に履歴を1つ積む
+  // モーダルが開いた時に履歴を1つ積む（開いた時のみ、閉じる時は何もしない）
   useEffect(() => { if (isDayOpen)      history.pushState({ modal: "day" }, "");    }, [isDayOpen]);
   useEffect(() => { if (isWeekOpen)     history.pushState({ modal: "week" }, "");   }, [isWeekOpen]);
   useEffect(() => { if (isMasterOpen)   history.pushState({ modal: "master" }, ""); }, [isMasterOpen]);
   useEffect(() => { if (isMoveOpen)     history.pushState({ modal: "move" }, "");   }, [isMoveOpen]);
   useEffect(() => { if (isMultiAddOpen) history.pushState({ modal: "multi" }, "");  }, [isMultiAddOpen]);
 
-  // popstate（戻るボタン）で最前面のモーダルを1つ閉じる
+  // popstate（戻るボタン）で最前面のモーダルを1つ閉じる（マウント時に1回だけ登録）
   useEffect(() => {
     const handlePop = () => {
-      const viewport = document.querySelector('meta[name="viewport"]');
+      const { isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen,
+              closeDay, closeWeek, closeMaster, closeMoveModal, closeMultiAdd } = modalRef.current;
 
       // Move/MultiAddはDayModalの上に乗っているのでviewportはそのまま
       if (isMoveOpen)     { closeMoveModal(); return; }
       if (isMultiAddOpen) { closeMultiAdd();  return; }
 
-      // DayModal/WeekModal/MasterModalを閉じる時は月画面に戻るのでズーム解除
-      if (viewport) viewport.setAttribute('content', 'width=1280');
+      // DayModal/WeekModal/MasterModalを閉じる時はズーム解除
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) viewport.setAttribute('content', 'width=1280, initial-scale=1.0');
+      requestAnimationFrame(() => {
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+      });
+
       if (isDayOpen)    { closeDay();    return; }
       if (isWeekOpen)   { closeWeek();   return; }
       if (isMasterOpen) { closeMaster(); return; }
@@ -817,7 +827,7 @@ function AppInner() {
 
     window.addEventListener("popstate", handlePop);
     return () => window.removeEventListener("popstate", handlePop);
-  }, [isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen]);
+  }, []);
 
   // ============================================================
   // ===== ここから「書き込み」もSupabaseに統一 =====
