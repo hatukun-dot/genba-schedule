@@ -788,29 +788,30 @@ function AppInner() {
     }
   }, [selectedPeopleIds, peopleCountManual]);
 
-  // スマホの戻るボタンでモーダルを閉じる（UIボタンと同様にviewportもリセット）
+  // スマホの戻るボタンでモーダルを閉じる
+  // 設計：各モーダルが「開いた時」に1回だけpushStateし、
+  //        popstateが発火したら「最前面のモーダルを1つ閉じる」だけにする
+
+  // モーダルが開いた時に履歴を1つ積む
+  useEffect(() => { if (isDayOpen)      history.pushState({ modal: "day" }, "");    }, [isDayOpen]);
+  useEffect(() => { if (isWeekOpen)     history.pushState({ modal: "week" }, "");   }, [isWeekOpen]);
+  useEffect(() => { if (isMasterOpen)   history.pushState({ modal: "master" }, ""); }, [isMasterOpen]);
+  useEffect(() => { if (isMoveOpen)     history.pushState({ modal: "move" }, "");   }, [isMoveOpen]);
+  useEffect(() => { if (isMultiAddOpen) history.pushState({ modal: "multi" }, "");  }, [isMultiAddOpen]);
+
+  // popstate（戻るボタン）で最前面のモーダルを1つ閉じる
   useEffect(() => {
-    const anyOpen = isDayOpen || isWeekOpen || isMasterOpen || isMoveOpen || isMultiAddOpen;
-
-    if (anyOpen) {
-      history.pushState({ modal: true }, "");
-    }
-
     const handlePop = () => {
       const viewport = document.querySelector('meta[name="viewport"]');
 
-      if (isMoveOpen) {
-        // DayModalに戻るのでviewportはそのまま維持
-        closeMoveModal(); return;
-      }
-      if (isMultiAddOpen) {
-        // DayModalに戻るのでviewportはそのまま維持
-        closeMultiAdd(); return;
-      }
-      // 月画面に戻る場合はズーム解除
+      // Move/MultiAddはDayModalの上に乗っているのでviewportはそのまま
+      if (isMoveOpen)     { closeMoveModal(); return; }
+      if (isMultiAddOpen) { closeMultiAdd();  return; }
+
+      // DayModal/WeekModal/MasterModalを閉じる時は月画面に戻るのでズーム解除
       if (viewport) viewport.setAttribute('content', 'width=1280');
-      if (isDayOpen) { closeDay(); return; }
-      if (isWeekOpen) { closeWeek(); return; }
+      if (isDayOpen)    { closeDay();    return; }
+      if (isWeekOpen)   { closeWeek();   return; }
       if (isMasterOpen) { closeMaster(); return; }
     };
 

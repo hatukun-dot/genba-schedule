@@ -1,4 +1,4 @@
-import React, { useEffect } from "react"; // ← useEffect を追加
+import React, { useEffect, useLayoutEffect } from "react";
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
 
@@ -55,10 +55,9 @@ export function DayModal({
   onStartCopy,
 }) {
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) return;
-
     if (open) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else {
