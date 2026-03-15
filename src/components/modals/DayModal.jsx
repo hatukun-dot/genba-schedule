@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
 
@@ -283,22 +283,11 @@ export function DayModal({
 
             <div className="field">
               <div className="label">担当者（任意）</div>
-              <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 96 }}>
-                {(managersActiveSorted || []).map((m) => (
-                  <button
-                    key={m.id}
-                    className={`chip ${selectedManagerId === m.id ? "active" : ""}`}
-                    onClick={() => setSelectedManagerId(selectedManagerId === m.id ? null : m.id)}
-                  >
-                    {m.name}
-                  </button>
-                ))}
-              </div>
-              {selectedManagerId && (
-                <button className="btn" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setSelectedManagerId(null)}>
-                  担当者をクリア
-                </button>
-              )}
+              <ManagerInput
+                managersActiveSorted={managersActiveSorted}
+                selectedManagerId={selectedManagerId}
+                setSelectedManagerId={setSelectedManagerId}
+              />
             </div>
 
             {editingEventId && (
@@ -332,3 +321,51 @@ export function DayModal({
   );
 }
 
+
+// 担当者入力兼検索コンポーネント
+function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedManagerId }) {
+  const [input, setInput] = useState("");
+
+  const filtered = (managersActiveSorted || []).filter((m) =>
+    !input || m.name.includes(input)
+  );
+
+  const selectedManager = (managersActiveSorted || []).find((m) => m.id === selectedManagerId);
+
+  return (
+    <>
+      <input
+        className="input"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder={selectedManager ? selectedManager.name : "例：田中（空欄OK）"}
+        style={{ borderColor: selectedManagerId ? "rgba(0,0,0,.4)" : undefined }}
+      />
+      {filtered.length > 0 && (
+        <div className="chips chipsScroll" style={{ marginTop: 6 }}>
+          {filtered.map((m) => (
+            <button
+              key={m.id}
+              className={`chip ${selectedManagerId === m.id ? "active" : ""}`}
+              onClick={() => {
+                setSelectedManagerId(selectedManagerId === m.id ? null : m.id);
+                setInput("");
+              }}
+            >
+              {m.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {selectedManagerId && (
+        <button
+          className="btn"
+          style={{ marginTop: 6, fontSize: 12 }}
+          onClick={() => { setSelectedManagerId(null); setInput(""); }}
+        >
+          担当者をクリア
+        </button>
+      )}
+    </>
+  );
+}

@@ -864,8 +864,9 @@ function AppInner() {
   // refで常に最新のstate/関数を参照することでクロージャ問題を回避
   const modalRef = useRef({});
   modalRef.current = {
-    isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen,
+    isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen, isExcelOpen,
     closeDay, closeWeek, closeMaster, closeMoveModal, closeMultiAdd,
+    closeExcel: () => setIsExcelOpen(false),
   };
 
   // モーダルが開いた時に履歴を1つ積む（開いた時のみ、閉じる時は何もしない）
@@ -874,6 +875,7 @@ function AppInner() {
   useEffect(() => { if (isMasterOpen)   history.pushState({ modal: "master" }, ""); }, [isMasterOpen]);
   useEffect(() => { if (isMoveOpen)     history.pushState({ modal: "move" }, "");   }, [isMoveOpen]);
   useEffect(() => { if (isMultiAddOpen) history.pushState({ modal: "multi" }, "");  }, [isMultiAddOpen]);
+  useEffect(() => { if (isExcelOpen)    history.pushState({ modal: "excel" }, "");  }, [isExcelOpen]);
 
   // popstate（戻るボタン）で最前面のモーダルを1つ閉じる（マウント時に1回だけ登録）
   useEffect(() => {
@@ -884,6 +886,13 @@ function AppInner() {
       // Move/MultiAddはDayModalの上に乗っているのでviewportはそのまま
       if (isMoveOpen)     { closeMoveModal(); return; }
       if (isMultiAddOpen) { closeMultiAdd();  return; }
+
+      // ExcelModalを閉じる時はズーム解除
+      if (isExcelOpen) {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        closeExcel(); return;
+      }
 
       // DayModal/WeekModal/MasterModalを閉じる時はズーム解除
       const viewport = document.querySelector('meta[name="viewport"]');
@@ -2108,7 +2117,11 @@ function AppInner() {
           // TODO: Excel生成ロジック（Excelファイル確認後に実装）
           console.log("export", ids);
         }}
-        onClose={() => setIsExcelOpen(false)}
+        onClose={() => {
+          const viewport = document.querySelector('meta[name="viewport"]');
+          if (viewport) viewport.setAttribute('content', 'width=1280');
+          setIsExcelOpen(false);
+        }}
         onSurfaceClick={onSurfaceClick}
       />
 

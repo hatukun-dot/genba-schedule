@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { norm } from "../../utils/id";
 
 const CLOSING_TYPES = ["20日締め", "月末締め"];
@@ -23,6 +23,34 @@ export function ExcelModal({
   const [editingNameId, setEditingNameId] = useState(null);
   const [editingNameVal, setEditingNameVal] = useState("");
   const [settingsTargetId, setSettingsTargetId] = useState(null);
+
+  // ズーム処理
+  useLayoutEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    if (open) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    } else {
+      viewport.setAttribute('content', 'width=1280');
+    }
+  }, [open]);
+
+  // スマホ戻るボタン対応
+  useEffect(() => {
+    if (open) history.pushState({ modal: "excel" }, "");
+  }, [open]);
+
+  useEffect(() => {
+    const handlePop = () => {
+      if (open) {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) viewport.setAttribute('content', 'width=1280');
+        onClose();
+      }
+    };
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, [open, onClose]);
 
   if (!open) return null;
 
