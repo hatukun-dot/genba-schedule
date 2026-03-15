@@ -18,6 +18,11 @@ export function MasterModal({
   restoreProject,
   restoreTask,
   restorePerson,
+  managersActive,
+  deletedManagers,
+  newManagerName,
+  setNewManagerName,
+  restoreManager,
   newGenbaName,
   setNewGenbaName,
   newTaskName,
@@ -71,10 +76,13 @@ export function MasterModal({
             <button className="btn" onClick={() => setMasterTab("people")} disabled={masterTab === "people"}>
               人員
             </button>
+            <button className="btn" onClick={() => setMasterTab("manager")} disabled={masterTab === "manager"}>
+              担当者
+            </button>
           </div>
 
           <div className="eventList">
-            {(masterTab === "genba" ? projectsActive : masterTab === "task" ? tasksActive : peopleActiveSorted).map((row) => {
+            {(masterTab === "genba" ? projectsActive : masterTab === "task" ? tasksActive : masterTab === "people" ? peopleActiveSorted : managersActive).map((row) => {
               const mk = `master-${masterTab}-${row.id}`;
               return (
                 <div key={row.id} className="eventRow">
@@ -194,6 +202,37 @@ export function MasterModal({
             </>
           )}
 
+          {masterTab === "manager" && deletedManagers.length > 0 && (
+            <>
+              <div style={{ height: 14 }} />
+              <div className="sectionTitle" style={{ margin: 0 }}>
+                削除済み
+              </div>
+              <div className="eventList" style={{ marginTop: 10 }}>
+                {deletedManagers.map((m) => {
+                  const mk = `master-deleted-manager-${m.id}`;
+                  return (
+                    <div key={m.id} className="eventRow">
+                      <div className="eventMain">{m.name}（削除済み）</div>
+                      <div className="eventActions">
+                        <button className="dots" onClick={(e) => (e.stopPropagation(), toggleMenu(mk))}>
+                          …
+                        </button>
+                        {openMenuKey === mk && (
+                          <div className="menu" onClick={(e) => e.stopPropagation()}>
+                            <button className="menuBtn" onClick={() => (restoreManager(m.id), closeMenu())}>
+                              復元
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
           <div style={{ height: 16 }} />
 
           <div className="form">
@@ -227,6 +266,18 @@ export function MasterModal({
                 <div className="addPersonRow">
                   <input className="input" value={newPersonName} onChange={(e) => setNewPersonName(e.target.value)} placeholder="例：田中" />
                   <button className="btn" onClick={() => addMaster("people")}>
+                    追加
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {masterTab === "manager" && (
+              <div className="field">
+                <div className="label">担当者を追加</div>
+                <div className="addPersonRow">
+                  <input className="input" value={newManagerName} onChange={(e) => setNewManagerName(e.target.value)} placeholder="例：田中" />
+                  <button className="btn" onClick={() => addMaster("manager")}>
                     追加
                   </button>
                 </div>

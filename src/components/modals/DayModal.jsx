@@ -53,6 +53,9 @@ export function DayModal({
   addEvent,
   saveEditEvent,
   onStartCopy,
+  managersActiveSorted,
+  selectedManagerId,
+  setSelectedManagerId,
 }) {
 
   useLayoutEffect(() => {
@@ -276,6 +279,26 @@ export function DayModal({
                   );
                 })}
               </div>
+            </div>
+
+            <div className="field">
+              <div className="label">担当者（任意）</div>
+              <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 96 }}>
+                {(managersActiveSorted || []).map((m) => (
+                  <button
+                    key={m.id}
+                    className={`chip ${selectedManagerId === m.id ? "active" : ""}`}
+                    onClick={() => setSelectedManagerId(selectedManagerId === m.id ? null : m.id)}
+                  >
+                    {m.name}
+                  </button>
+                ))}
+              </div>
+              {selectedManagerId && (
+                <button className="btn" style={{ marginTop: 6, fontSize: 12 }} onClick={() => setSelectedManagerId(null)}>
+                  担当者をクリア
+                </button>
+              )}
             </div>
 
             {editingEventId && (

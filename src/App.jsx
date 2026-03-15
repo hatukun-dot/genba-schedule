@@ -141,6 +141,7 @@ function AppInner() {
   const [newGenbaName, setNewGenbaName] = useState("");
   const [newTaskName, setNewTaskName] = useState("");
   const [newPersonName, setNewPersonName] = useState("");
+  const [newManagerName, setNewManagerName] = useState("");
   const [newPersonInline, setNewPersonInline] = useState("");
   const [editKind, setEditKind] = useState(null); // "genba"|"task"|"people"|null
   const [editId, setEditId] = useState(null);
@@ -397,6 +398,7 @@ function AppInner() {
     setNewGenbaName("");
     setNewTaskName("");
     setNewPersonName("");
+    setNewManagerName("");
     setNewPersonInline("");
     setEditKind(null);
     setEditId(null);
@@ -1421,6 +1423,26 @@ function AppInner() {
           console.error(e);
           pushError("人員の追加に失敗しました", e?.message || String(e));
         }
+        return;
+      }
+      if (kind === "manager") {
+        const name = norm(newManagerName);
+        if (!name) return;
+        try {
+          const hitDeleted = managersAll.find((m) => m.name === name && m.deletedAt);
+          if (hitDeleted) {
+            const { error } = await api.restoreManagerById(hitDeleted.id);
+            if (error) throw error;
+          } else {
+            const { error } = await api.createManager({ name, createdAt });
+            if (error) throw error;
+          }
+          setNewManagerName("");
+          await reloadMasters();
+        } catch (e) {
+          console.error(e);
+          pushError("担当者の追加に失敗しました", e?.message || String(e));
+        }
       }
     });
   }
@@ -1443,6 +1465,10 @@ function AppInner() {
         }
         if (editKind === "people") {
           const { error } = await api.updatePersonName({ id: editId, name });
+          if (error) throw error;
+        }
+        if (editKind === "manager") {
+          const { error } = await api.updateManagerName({ id: editId, name });
           if (error) throw error;
         }
 
@@ -1484,6 +1510,13 @@ function AppInner() {
 
         if (kind === "task") {
           const { error } = await api.softDeleteTaskById({ id, nowIso: now });
+          if (error) throw error;
+          await reloadMasters();
+          setReloadTick((x) => x + 1);
+          return;
+        }
+        if (kind === "manager") {
+          const { error } = await api.softDeleteManagerById({ id, nowIso: now });
           if (error) throw error;
           await reloadMasters();
           setReloadTick((x) => x + 1);
@@ -1539,7 +1572,24 @@ function AppInner() {
     });
   }
 
+  async function restoreManager(id) {
+    await guard(async () => {
+      clearError();
+
+      const { error } = await api.restoreManagerById(id);
+      if (error) {
+        console.error(error);
+        pushError("復元に失敗しました", error?.message || String(error));
+        return;
+      }
+      await reloadMasters();
+      setReloadTick((x) => x + 1);
+    });
+  }
+
   const deletedPeople = useMemo(() => (peopleAll || []).filter((p) => p.deletedAt), [peopleAll]);
+  const managersActive = useMemo(() => (managersAll || []).filter((m) => !m.deletedAt), [managersAll]);
+  const deletedManagers = useMemo(() => (managersAll || []).filter((m) => m.deletedAt), [managersAll]);
 
   const projectSuggestions = useMemo(() => {
     const q = norm(projectInput);
@@ -1894,6 +1944,11 @@ function AppInner() {
         restoreProject={restoreProject}
         restoreTask={restoreTask}
         restorePerson={restorePerson}
+        managersActive={managersActive}
+        deletedManagers={deletedManagers}
+        newManagerName={newManagerName}
+        setNewManagerName={setNewManagerName}
+        restoreManager={restoreManager}
         newGenbaName={newGenbaName}
         setNewGenbaName={setNewGenbaName}
         newTaskName={newTaskName}
