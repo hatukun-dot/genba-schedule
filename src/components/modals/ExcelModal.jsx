@@ -79,7 +79,7 @@ export function ExcelModal({
     <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modalHeader">
-          <button className="btn" onClick={onClose}>
+          <button className="btn" onClick={onClose} style={{ whiteSpace: "nowrap" }}>
             ← 戻る
           </button>
           <div className="modalTitle">Excel出力 {monthLabel}</div>
@@ -171,7 +171,7 @@ export function ExcelModal({
               {/* 請求先選択 */}
               <div className="field" style={{ marginBottom: 14 }}>
                 <div className="label">設定する請求先</div>
-                <div className="chips" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxHeight: 120 }}>
+                <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
                   {activeTargets.map((t) => (
                     <button
                       key={t.id}
@@ -282,7 +282,7 @@ export function ExcelModal({
               {/* 統合先選択 */}
               <div className="field" style={{ marginBottom: 14 }}>
                 <div className="label">統合先</div>
-                <div className="chips" style={{ gridTemplateColumns: "repeat(2, 1fr)", maxHeight: 120 }}>
+                <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
                   {activeTargets.map((t) => (
                     <button
                       key={t.id}
