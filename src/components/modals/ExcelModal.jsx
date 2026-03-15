@@ -9,6 +9,7 @@ export function ExcelModal({
   open,
   monthLabel,
   billingTargets,
+  projects,
   onUpdateBillingTarget,
   onAddBillingTarget,
   onMergeBillingTargets,
@@ -145,9 +146,13 @@ export function ExcelModal({
                   const hasChildren = children.length > 0;
                   const isExpanded = expandedGroupIds.has(t.id);
                   // 現場名と請求先名が違う場合は（現場名）を表示
-                  const projectName = t.projectId
-                    ? billingTargets.find((b) => b.id === t.id)?.name ?? ""
+                  const linkedProject = t.projectId
+                    ? (projects || []).find((p) => p.id === t.projectId)
                     : null;
+                  const projectName = linkedProject?.name ?? null;
+                  const displayName = projectName && projectName !== t.name
+                    ? `${t.name}（${projectName}）`
+                    : t.name;
 
                   return (
                     <div key={t.id}>
@@ -175,7 +180,7 @@ export function ExcelModal({
                         ) : (
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {t.name}
+                              {displayName}
                             </div>
                             <div style={{ fontSize: 12, color: "rgba(0,0,0,.55)" }}>
                               {t.closingType}・{t.outputType}・{t.billingType}

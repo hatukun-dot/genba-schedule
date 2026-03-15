@@ -2132,6 +2132,7 @@ function AppInner() {
         open={isExcelOpen}
         monthLabel={monthLabel}
         billingTargets={billingTargets}
+        projects={projects}
         onUpdateBillingTarget={updateBillingTarget}
         onAddBillingTarget={addBillingTarget}
         onMergeBillingTargets={mergeBillingTargets}
