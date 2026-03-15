@@ -140,3 +140,7 @@ export async function updateBillingTarget({ id, patch }) {
 export async function softDeleteBillingTargetById({ id, nowIso }) {
   return await supabase.from("billing_targets").update({ deleted_at: nowIso }).eq("id", id);
 }
+
+export async function setBillingTargetGroup({ id, groupId }) {
+  return await supabase.from("billing_targets").update({ group_id: groupId }).eq("id", id);
+}

@@ -1640,6 +1640,7 @@ function AppInner() {
     if ("billingType" in patch) dbPatch.billing_type = patch.billingType;
     if ("groupByManager" in patch) dbPatch.group_by_manager = patch.groupByManager;
     if ("unitPrice" in patch) dbPatch.unit_price = patch.unitPrice;
+    if ("groupId" in patch) dbPatch.group_id = patch.groupId;
 
     const { error } = await api.updateBillingTarget({ id, patch: dbPatch });
     if (error) {
@@ -1661,9 +1662,21 @@ function AppInner() {
   }
 
   async function mergeBillingTargets(targetId, sourceIds) {
-    const now = new Date().toISOString();
-    await Promise.all(sourceIds.map((id) => api.softDeleteBillingTargetById({ id, nowIso: now })));
-    setBillingTargets((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
+    // グループ化：sourceIdsのgroup_idをtargetIdに設定（削除しない）
+    await Promise.all(sourceIds.map((id) => api.updateBillingTarget({ id, patch: { group_id: targetId } })));
+    setBillingTargets((prev) => prev.map((t) =>
+      sourceIds.includes(t.id) ? { ...t, groupId: targetId } : t
+    ));
+  }
+
+  async function detachFromGroup(id) {
+    // グループから分離：group_idをnullに戻す
+    const { error } = await api.updateBillingTarget({ id, patch: { group_id: null } });
+    if (error) {
+      pushError("分離に失敗しました", error?.message || String(error));
+      return;
+    }
+    setBillingTargets((prev) => prev.map((t) => t.id === id ? { ...t, groupId: null } : t));
   }
 
   const projectSuggestions = useMemo(() => {
@@ -2122,6 +2135,7 @@ function AppInner() {
         onUpdateBillingTarget={updateBillingTarget}
         onAddBillingTarget={addBillingTarget}
         onMergeBillingTargets={mergeBillingTargets}
+        onDetachFromGroup={detachFromGroup}
         onExport={(ids) => {
           // TODO: Excel生成ロジック（Excelファイル確認後に実装）
           console.log("export", ids);

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { norm } from "../../utils/id";
 
 const CLOSING_TYPES = ["20日締め", "月末締め"];
@@ -12,19 +12,20 @@ export function ExcelModal({
   onUpdateBillingTarget,
   onAddBillingTarget,
   onMergeBillingTargets,
+  onDetachFromGroup,
   onExport,
   onClose,
   onSurfaceClick,
 }) {
-  const [tab, setTab] = useState("list"); // "list" | "settings" | "merge"
+  const [tab, setTab] = useState("list");
   const [checkedIds, setCheckedIds] = useState(new Set());
+  const [expandedGroupIds, setExpandedGroupIds] = useState(new Set());
   const [mergeTargetId, setMergeTargetId] = useState(null);
   const [mergeSourceIds, setMergeSourceIds] = useState(new Set());
   const [editingNameId, setEditingNameId] = useState(null);
   const [editingNameVal, setEditingNameVal] = useState("");
   const [settingsTargetId, setSettingsTargetId] = useState(null);
 
-  // ズーム処理
   useLayoutEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) return;
@@ -35,33 +36,20 @@ export function ExcelModal({
     }
   }, [open]);
 
-  // スマホ戻るボタン対応
-  useEffect(() => {
-    if (open) history.pushState({ modal: "excel" }, "");
-  }, [open]);
-
-  useEffect(() => {
-    const handlePop = () => {
-      if (open) {
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) viewport.setAttribute('content', 'width=1280');
-        onClose();
-      }
-    };
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, [open, onClose]);
-
   if (!open) return null;
 
-  const activeTargets = (billingTargets || []);
+  const allTargets = (billingTargets || []);
 
-  // 一括チェック
+  // 親（groupIdがnull）と子（groupIdがある）を分類
+  const parents = allTargets.filter((t) => !t.groupId);
+  const childrenOf = (parentId) => allTargets.filter((t) => t.groupId === parentId);
+
+  // 一括チェック（親のみ対象）
   function checkAll() {
-    setCheckedIds(new Set(activeTargets.map((t) => t.id)));
+    setCheckedIds(new Set(parents.map((t) => t.id)));
   }
   function checkClosing(type) {
-    setCheckedIds(new Set(activeTargets.filter((t) => t.closingType === type).map((t) => t.id)));
+    setCheckedIds(new Set(parents.filter((t) => t.closingType === type).map((t) => t.id)));
   }
   function toggleCheck(id) {
     setCheckedIds((prev) => {
@@ -71,9 +59,57 @@ export function ExcelModal({
       return next;
     });
   }
+  function toggleExpand(id) {
+    setExpandedGroupIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-  // 設定中のターゲット
-  const settingsTarget = activeTargets.find((t) => t.id === settingsTargetId) ?? null;
+  // 設定タブ：子を除いた親のみ
+  const settingsTargets = parents;
+  const settingsTarget = settingsTargets.find((t) => t.id === settingsTargetId) ?? null;
+
+  // 統合タブ：親のみを統合先候補に
+  // 統合先を選んだ時、その子をチェック済みで表示
+  function onSelectMergeTarget(id) {
+    setMergeTargetId(id);
+    const children = childrenOf(id);
+    setMergeSourceIds(new Set(children.map((c) => c.id)));
+  }
+
+  // 統合実行：チェックありは統合先のグループに追加、チェックなしは分離
+  async function executeMerge() {
+    if (!mergeTargetId) return;
+    const children = childrenOf(mergeTargetId);
+
+    // 現在の子でチェックが外れたものは分離
+    for (const c of children) {
+      if (!mergeSourceIds.has(c.id)) {
+        await onDetachFromGroup(c.id);
+      }
+    }
+
+    // チェックされたもの（既存の子以外）はグループに追加
+    const existingChildIds = new Set(children.map((c) => c.id));
+    const newSources = Array.from(mergeSourceIds).filter((id) => !existingChildIds.has(id));
+    if (newSources.length > 0) {
+      await onMergeBillingTargets(mergeTargetId, newSources);
+    }
+
+    setMergeTargetId(null);
+    setMergeSourceIds(new Set());
+  }
+
+  // 統合元候補：親のうち統合先以外 ＋ 統合先の子（分離用）
+  const mergeSourceCandidates = mergeTargetId
+    ? [
+        ...childrenOf(mergeTargetId), // 既存の子（チェック済みで表示、外すと分離）
+        ...parents.filter((t) => t.id !== mergeTargetId && !t.groupId), // 他の親
+      ]
+    : [];
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
@@ -87,78 +123,125 @@ export function ExcelModal({
         </div>
 
         <div className="modalBody" onClick={onSurfaceClick}>
-
           {/* タブ */}
           <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
             <button className="btn" onClick={() => setTab("list")} disabled={tab === "list"}>請求先</button>
             <button className="btn" onClick={() => setTab("settings")} disabled={tab === "settings"}>設定</button>
-            <button className="btn" onClick={() => setTab("merge")} disabled={tab === "merge"}>統合</button>
+            <button className="btn" onClick={() => setTab("merge")} disabled={tab === "merge"}>グループ</button>
           </div>
 
           {/* ===== 請求先タブ ===== */}
           {tab === "list" && (
             <>
-              {/* 一括選択ボタン */}
               <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
                 <button className="btn" onClick={checkAll}>一括</button>
                 <button className="btn" onClick={() => checkClosing("20日締め")}>20日締め</button>
                 <button className="btn" onClick={() => checkClosing("月末締め")}>月末締め</button>
               </div>
 
-              {/* 請求先リスト */}
               <div className="eventList">
-                {activeTargets.map((t) => (
-                  <div key={t.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <input
-                      type="checkbox"
-                      checked={checkedIds.has(t.id)}
-                      onChange={() => toggleCheck(t.id)}
-                      style={{ flexShrink: 0 }}
-                    />
-                    {editingNameId === t.id ? (
-                      <input
-                        className="input"
-                        style={{ flex: 1 }}
-                        value={editingNameVal}
-                        onChange={(e) => setEditingNameVal(e.target.value)}
-                        onBlur={() => {
-                          const n = norm(editingNameVal);
-                          if (n) onUpdateBillingTarget(t.id, { name: n });
-                          setEditingNameId(null);
-                        }}
-                        autoFocus
-                      />
-                    ) : (
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {t.name}
-                        </div>
-                        <div style={{ fontSize: 12, color: "rgba(0,0,0,.55)" }}>
-                          {t.closingType}・{t.outputType}・{t.billingType}
-                          {t.groupByManager ? "・担当者別" : ""}
-                        </div>
+                {parents.map((t) => {
+                  const children = childrenOf(t.id);
+                  const hasChildren = children.length > 0;
+                  const isExpanded = expandedGroupIds.has(t.id);
+                  // 現場名と請求先名が違う場合は（現場名）を表示
+                  const projectName = t.projectId
+                    ? billingTargets.find((b) => b.id === t.id)?.name ?? ""
+                    : null;
+
+                  return (
+                    <div key={t.id}>
+                      {/* 親行 */}
+                      <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={checkedIds.has(t.id)}
+                          onChange={() => toggleCheck(t.id)}
+                          style={{ flexShrink: 0 }}
+                        />
+                        {editingNameId === t.id ? (
+                          <input
+                            className="input"
+                            style={{ flex: 1 }}
+                            value={editingNameVal}
+                            onChange={(e) => setEditingNameVal(e.target.value)}
+                            onBlur={() => {
+                              const n = norm(editingNameVal);
+                              if (n) onUpdateBillingTarget(t.id, { name: n });
+                              setEditingNameId(null);
+                            }}
+                            autoFocus
+                          />
+                        ) : (
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 900, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {t.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: "rgba(0,0,0,.55)" }}>
+                              {t.closingType}・{t.outputType}・{t.billingType}
+                              {t.groupByManager ? "・担当者別" : ""}
+                            </div>
+                          </div>
+                        )}
+                        <button
+                          className="btn"
+                          style={{ flexShrink: 0, fontSize: 12, padding: "6px 10px" }}
+                          onClick={() => { setEditingNameId(t.id); setEditingNameVal(t.name); }}
+                        >
+                          名称変更
+                        </button>
+                        {hasChildren && (
+                          <button
+                            className="btn"
+                            style={{ flexShrink: 0, fontSize: 14, padding: "6px 10px", fontWeight: 900 }}
+                            onClick={() => toggleExpand(t.id)}
+                          >
+                            {isExpanded ? "－" : "＋"}
+                          </button>
+                        )}
                       </div>
-                    )}
-                    <button
-                      className="btn"
-                      style={{ flexShrink: 0, fontSize: 12, padding: "6px 10px" }}
-                      onClick={() => {
-                        setEditingNameId(t.id);
-                        setEditingNameVal(t.name);
-                      }}
-                    >
-                      名称変更
-                    </button>
-                  </div>
-                ))}
+
+                      {/* 子行（展開時） */}
+                      {hasChildren && isExpanded && (
+                        <div style={{ marginLeft: 24, marginTop: 4, display: "grid", gap: 4 }}>
+                          {children.map((c) => (
+                            <div key={c.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.03)" }}>
+                              <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>
+                                {c.name}
+                              </div>
+                              {editingNameId === c.id ? (
+                                <input
+                                  className="input"
+                                  style={{ flex: 1 }}
+                                  value={editingNameVal}
+                                  onChange={(e) => setEditingNameVal(e.target.value)}
+                                  onBlur={() => {
+                                    const n = norm(editingNameVal);
+                                    if (n) onUpdateBillingTarget(c.id, { name: n });
+                                    setEditingNameId(null);
+                                  }}
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  className="btn"
+                                  style={{ flexShrink: 0, fontSize: 12, padding: "4px 8px" }}
+                                  onClick={() => { setEditingNameId(c.id); setEditingNameVal(c.name); }}
+                                >
+                                  名称変更
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* 請求先追加 */}
               <div style={{ marginTop: 14 }}>
-                <button
-                  className="btn"
-                  onClick={() => onAddBillingTarget()}
-                >
+                <button className="btn" onClick={() => onAddBillingTarget()}>
                   ＋ 請求先を追加
                 </button>
               </div>
@@ -168,11 +251,10 @@ export function ExcelModal({
           {/* ===== 設定タブ ===== */}
           {tab === "settings" && (
             <>
-              {/* 請求先選択 */}
               <div className="field" style={{ marginBottom: 14 }}>
                 <div className="label">設定する請求先</div>
                 <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
-                  {activeTargets.map((t) => (
+                  {settingsTargets.map((t) => (
                     <button
                       key={t.id}
                       className={`chip ${settingsTargetId === t.id ? "active" : ""}`}
@@ -186,7 +268,6 @@ export function ExcelModal({
 
               {settingsTarget && (
                 <div className="form">
-                  {/* 単価 */}
                   <div className="field">
                     <div className="label">単価（空欄可）</div>
                     <input
@@ -200,71 +281,46 @@ export function ExcelModal({
                       }}
                     />
                   </div>
-
-                  {/* 締め日 */}
                   <div className="field">
                     <div className="label">締め日</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {CLOSING_TYPES.map((ct) => (
-                        <button
-                          key={ct}
-                          className={`btn ${settingsTarget.closingType === ct ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { closingType: ct })}
-                        >
+                        <button key={ct} className={`btn ${settingsTarget.closingType === ct ? "primary" : ""}`}
+                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { closingType: ct })}>
                           {ct}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* 出力方式 */}
                   <div className="field">
                     <div className="label">出力方式</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {OUTPUT_TYPES.map((ot) => (
-                        <button
-                          key={ot}
-                          className={`btn ${settingsTarget.outputType === ot ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { outputType: ot })}
-                        >
+                        <button key={ot} className={`btn ${settingsTarget.outputType === ot ? "primary" : ""}`}
+                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { outputType: ot })}>
                           {ot}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* 請求方式 */}
                   <div className="field">
                     <div className="label">請求方式</div>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       {BILLING_TYPES.map((bt) => (
-                        <button
-                          key={bt}
-                          className={`btn ${settingsTarget.billingType === bt ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { billingType: bt })}
-                        >
+                        <button key={bt} className={`btn ${settingsTarget.billingType === bt ? "primary" : ""}`}
+                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { billingType: bt })}>
                           {bt}
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  {/* 担当者ごとにまとめる */}
                   <div className="field">
                     <div className="label">担当者ごとにまとめる</div>
                     <div style={{ display: "flex", gap: 8 }}>
-                      <button
-                        className={`btn ${settingsTarget.groupByManager ? "primary" : ""}`}
-                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: true })}
-                      >
-                        ON
-                      </button>
-                      <button
-                        className={`btn ${!settingsTarget.groupByManager ? "primary" : ""}`}
-                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: false })}
-                      >
-                        OFF
-                      </button>
+                      <button className={`btn ${settingsTarget.groupByManager ? "primary" : ""}`}
+                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: true })}>ON</button>
+                      <button className={`btn ${!settingsTarget.groupByManager ? "primary" : ""}`}
+                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: false })}>OFF</button>
                     </div>
                   </div>
                 </div>
@@ -272,25 +328,21 @@ export function ExcelModal({
             </>
           )}
 
-          {/* ===== 統合タブ ===== */}
+          {/* ===== グループタブ ===== */}
           {tab === "merge" && (
             <>
               <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 12 }}>
-                統合先を選んで、統合する請求先にチェックを入れてください
+                グループ親を選んで、まとめる請求先にチェックを入れてください。既存のチェックを外して実行すると分離されます。
               </div>
 
-              {/* 統合先選択 */}
               <div className="field" style={{ marginBottom: 14 }}>
-                <div className="label">統合先</div>
+                <div className="label">グループ親</div>
                 <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
-                  {activeTargets.map((t) => (
+                  {parents.map((t) => (
                     <button
                       key={t.id}
                       className={`chip ${mergeTargetId === t.id ? "active" : ""}`}
-                      onClick={() => {
-                        setMergeTargetId(t.id);
-                        setMergeSourceIds(new Set());
-                      }}
+                      onClick={() => onSelectMergeTarget(t.id)}
                     >
                       {t.name}
                     </button>
@@ -298,40 +350,43 @@ export function ExcelModal({
                 </div>
               </div>
 
-              {/* 統合元選択 */}
               {mergeTargetId && (
                 <div className="field" style={{ marginBottom: 14 }}>
-                  <div className="label">統合する請求先（チェック）</div>
+                  <div className="label">グループに含める請求先</div>
+                  <div style={{ color: "rgba(0,0,0,.55)", fontSize: 12, marginBottom: 8 }}>
+                    ※チェックあり＝グループに含む　チェックなし＝グループから外す
+                  </div>
                   <div className="eventList">
-                    {activeTargets.filter((t) => t.id !== mergeTargetId).map((t) => (
-                      <div key={t.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <input
-                          type="checkbox"
-                          checked={mergeSourceIds.has(t.id)}
-                          onChange={() => {
-                            setMergeSourceIds((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(t.id)) next.delete(t.id);
-                              else next.add(t.id);
-                              return next;
-                            });
-                          }}
-                        />
-                        <span>{t.name}</span>
-                      </div>
-                    ))}
+                    {mergeSourceCandidates.map((t) => {
+                      const isExistingChild = t.groupId === mergeTargetId;
+                      return (
+                        <div key={t.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <input
+                            type="checkbox"
+                            checked={mergeSourceIds.has(t.id)}
+                            onChange={() => {
+                              setMergeSourceIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(t.id)) next.delete(t.id);
+                                else next.add(t.id);
+                                return next;
+                              });
+                            }}
+                          />
+                          <span style={{ flex: 1 }}>{t.name}</span>
+                          {isExistingChild && (
+                            <span style={{ fontSize: 11, color: "rgba(0,0,0,.45)" }}>グループ中</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                   <button
                     className="btn primary"
                     style={{ marginTop: 12 }}
-                    disabled={mergeSourceIds.size === 0}
-                    onClick={() => {
-                      onMergeBillingTargets(mergeTargetId, Array.from(mergeSourceIds));
-                      setMergeTargetId(null);
-                      setMergeSourceIds(new Set());
-                    }}
+                    onClick={executeMerge}
                   >
-                    統合実行
+                    実行
                   </button>
                 </div>
               )}
@@ -339,7 +394,6 @@ export function ExcelModal({
           )}
         </div>
 
-        {/* フッター：出力ボタン */}
         <div className="modalFooter">
           <button
             className="btn primary"

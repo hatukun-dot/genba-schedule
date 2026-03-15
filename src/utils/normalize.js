@@ -83,6 +83,7 @@ export function normalizeBillingTargetRow(r) {
     id: toIntOrNull(r.id),
     name: r.name,
     projectId: toIntOrNull(r.project_id ?? r.projectId ?? null),
+    groupId: toIntOrNull(r.group_id ?? r.groupId ?? null),
     closingType: r.closing_type ?? r.closingType ?? '月末締め',
     outputType: r.output_type ?? r.outputType ?? 'リストのみ',
     billingType: r.billing_type ?? r.billingType ?? '人工',
