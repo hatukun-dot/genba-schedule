@@ -765,12 +765,21 @@ function AppInner() {
     return hit.name;
   }
 
+  function managerNameById(id) {
+    if (id === null || id === undefined) return "";
+    const nid = toIntOrNull(id);
+    const hit = managersAll.find((m) => m.id === nid);
+    if (!hit) return "";
+    if (hit.deletedAt) return `${hit.name}（削除済み）`;
+    return hit.name ?? "";
+  }
+
   function eventLabel(e) {
     const g = genbaNameById(e.projectId);
+    const m = managerNameById(e.managerId);
     const t = taskNameById(e.taskId);
     const n = e.note ? String(e.note).trim() : "";
-    const base = t ? `${g} ${t}` : `${g}`;
-    return n ? `${base} ${n}` : base;
+    return [g, m, t, n].filter(Boolean).join(" ");
   }
 
   function peopleLine(e) {
