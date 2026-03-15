@@ -11,7 +11,7 @@ import { MonthGrid } from "./components/month/MonthGrid";
 import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
 import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
-import { normalizeEventRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
+import { normalizeEventRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
 import * as api from "./services/api";
 import { isHolidayDate } from "./utils/holiday";
 
@@ -77,9 +77,13 @@ function AppInner() {
   const [projects, setProjects] = useState([]); // 現場（削除済み含む）
   const [tasks, setTasks] = useState([]); // 作業（削除済み含む）
   const [peopleAll, setPeopleAll] = useState([]); // 人員（削除済み含む）
+  const [managersAll, setManagersAll] = useState([]); // 担当者（削除済み含む）
 
   // ★人員累計使用回数（personId -> count） Dexieに残す（無ければ空）
   const [peopleUsageMap, setPeopleUsageMap] = useState({});
+
+  // ★担当者累計使用回数（"projectId:managerId" -> count） Dexieに残す
+  const [managerUsageMap, setManagerUsageMap] = useState({});
 
   // ★人員（表示順は「累計選択回数」降順、同数は名前順）
   const peopleActiveSorted = useMemo(() => {
@@ -155,6 +159,7 @@ function AppInner() {
   const [peopleCountManual, setPeopleCountManual] = useState(false);
   const [color, setColor] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
+  const [selectedManagerId, setSelectedManagerId] = useState(null);
 
   // --- 複数日に追加（モーダル） ---
   const [isMultiAddOpen, setIsMultiAddOpen] = useState(false);
@@ -387,6 +392,7 @@ function AppInner() {
     setPeopleCountManual(false);
     setColor(null);
     setEditingEventId(null);
+    setSelectedManagerId(null);
 
     setNewGenbaName("");
     setNewTaskName("");
@@ -400,10 +406,12 @@ function AppInner() {
     setProjects([]);
     setTasks([]);
     setPeopleAll([]);
+    setManagersAll([]);
     setEventsByKey({});
     setTaskUsageMap({});
     setProjectUsageMap({});
     setPeopleUsageMap({});
+    setManagerUsageMap({});
 
     // 画面位置
     try {
@@ -447,6 +455,7 @@ function AppInner() {
       await reloadTaskUsage();
       await reloadProjectUsage();
       await reloadPeopleUsage();
+      await reloadManagerUsage();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -455,12 +464,15 @@ function AppInner() {
     (async () => {
       await reloadProjectUsage();
       await reloadPeopleUsage();
+      await reloadManagerUsage();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadTick]);
 
   async function reloadMasters() {
-    const [pRes, tRes, peRes] = await Promise.all([api.fetchProjects(), api.fetchTasks(), api.fetchPeople()]);
+    const [pRes, tRes, peRes, mgRes] = await Promise.all([
+      api.fetchProjects(), api.fetchTasks(), api.fetchPeople(), api.fetchManagers()
+    ]);
 
     if (pRes.error) {
       console.error("projects load error", pRes.error);
@@ -477,10 +489,16 @@ function AppInner() {
       pushError("人員の読み込みに失敗しました", peRes.error?.message || String(peRes.error));
       return;
     }
+    if (mgRes.error) {
+      console.error("managers load error", mgRes.error);
+      pushError("担当者の読み込みに失敗しました", mgRes.error?.message || String(mgRes.error));
+      return;
+    }
 
     const p = (pRes.data || []).map(normalizeProjectRow);
     const t = (tRes.data || []).map(normalizeTaskRow);
     const peAll = (peRes.data || []).map(normalizePeopleRow);
+    const mgAll = (mgRes.data || []).map(normalizeManagerRow);
 
     p.sort((a, b) => {
       const ra = pinRank(a.name);
@@ -492,6 +510,7 @@ function AppInner() {
     setProjects(p);
     setTasks(t);
     setPeopleAll(peAll);
+    setManagersAll(mgAll);
   }
 
   async function reloadTaskUsage() {
@@ -537,6 +556,37 @@ function AppInner() {
       map[r.personId] = r.count ?? 0;
     }
     setPeopleUsageMap(map);
+  }
+
+  async function reloadManagerUsage() {
+    if (!db.managerUsage) {
+      setManagerUsageMap({});
+      return;
+    }
+    const rows = await db.managerUsage.toArray();
+    const map = {};
+    for (const r of rows) {
+      map[`${r.projectId}:${r.managerId}`] = r.count ?? 0;
+    }
+    setManagerUsageMap(map);
+  }
+
+  async function bumpManagerUsage(projectId, managerId) {
+    if (!db.managerUsage) return;
+    if (!projectId || !managerId) return;
+
+    const key = [projectId, managerId];
+    const now = new Date().toISOString();
+
+    const hit = await db.managerUsage.get(key);
+    if (!hit) {
+      await db.managerUsage.put({ projectId, managerId, count: 1, updatedAt: now });
+      setManagerUsageMap((prev) => ({ ...prev, [`${projectId}:${managerId}`]: 1 }));
+      return;
+    }
+    const next = (hit.count ?? 0) + 1;
+    await db.managerUsage.put({ ...hit, count: next, updatedAt: now });
+    setManagerUsageMap((prev) => ({ ...prev, [`${projectId}:${managerId}`]: next }));
   }
 
   async function bumpTaskUsage(projectId, taskId) {
@@ -949,6 +999,7 @@ function AppInner() {
     setPeopleCountManual(false);
     setColor(null);
     setEditingEventId(null);
+    setSelectedManagerId(null);
     closeMenu();
     dayBodyRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
   }
@@ -1001,6 +1052,7 @@ function AppInner() {
         people_count: toDbPeopleCount(peopleCount),
         people_ids: uniqNumArray(selectedPeopleIds),
         color: color,
+        manager_id: selectedManagerId,
         order: maxOrder + 1,
         created_at: now,
         updated_at: now,
@@ -1021,6 +1073,7 @@ function AppInner() {
 
       if (pid && tid) await bumpTaskUsage(pid, tid);
       await bumpPeopleUsage(selectedPeopleIds, 1);
+      if (pid && selectedManagerId) await bumpManagerUsage(pid, selectedManagerId);
 
       resetForm();
       setReloadTick((x) => x + 1);
@@ -1072,6 +1125,7 @@ function AppInner() {
         people_count: copySourceEvent ? copySourceEvent.people_count : toDbPeopleCount(peopleCount),
         people_ids: copySourceEvent ? copySourceEvent.people_ids : uniqNumArray(selectedPeopleIds),
         color: copySourceEvent ? copySourceEvent.color : color,
+        manager_id: copySourceEvent ? (copySourceEvent.manager_id ?? null) : selectedManagerId,
         order: maxOrder + 1,
         created_at: now,
         updated_at: now,
@@ -1090,6 +1144,8 @@ function AppInner() {
       }
 
       if (pid && tid) await bumpTaskUsage(pid, tid);
+      const targetManagerId = copySourceEvent ? (copySourceEvent.manager_id ?? null) : selectedManagerId;
+      if (pid && targetManagerId) await bumpManagerUsage(pid, targetManagerId);
     }
 
     setIsMultiAddOpen(false);
@@ -1124,6 +1180,7 @@ function AppInner() {
           people_count: toDbPeopleCount(peopleCount),
           people_ids: uniqNumArray(selectedPeopleIds),
           color: color,
+          manager_id: selectedManagerId,
           updated_at: now,
         },
       });
@@ -1136,6 +1193,7 @@ function AppInner() {
 
       if (pid && tid) await bumpTaskUsage(pid, tid);
       await bumpPeopleUsage(selectedPeopleIds, 1);
+      if (pid && selectedManagerId) await bumpManagerUsage(pid, selectedManagerId);
 
       resetForm();
       setReloadTick((x) => x + 1);
@@ -1189,6 +1247,7 @@ function AppInner() {
     setSelectedPeopleIds(uniqNumArray(e.peopleIds));
     setPeopleCountManual(true);
     setColor(e.color ?? null);
+    setSelectedManagerId(e.managerId ?? null);
 
     closeMenu();
     setTimeout(() => {
@@ -1510,6 +1569,19 @@ function AppInner() {
     if (!name) return null;
     return projectsActive.find((p) => p.name === name)?.id ?? null;
   }, [projectInput, projectsActive]);
+
+  // ★担当者（現場ごとの使用頻度順、同数は名前順）
+  const managersActiveSorted = useMemo(() => {
+    const list = (managersAll || []).filter((m) => m.deletedAt === null || m.deletedAt === undefined);
+    return list.slice().sort((a, b) => {
+      const ka = currentProjectId ? `${currentProjectId}:${a.id}` : null;
+      const kb = currentProjectId ? `${currentProjectId}:${b.id}` : null;
+      const ca = ka ? (managerUsageMap[ka] ?? 0) : 0;
+      const cb = kb ? (managerUsageMap[kb] ?? 0) : 0;
+      if (ca !== cb) return cb - ca;
+      return String(a.name ?? "").localeCompare(String(b.name ?? ""), "ja");
+    });
+  }, [managersAll, managerUsageMap, currentProjectId]);
 
   const taskSuggestions = useMemo(() => {
     const q = norm(taskInput);
@@ -1857,6 +1929,9 @@ function AppInner() {
         peopleActiveSorted={peopleActiveSorted}
         selectedPeopleIds={selectedPeopleIds}
         newPersonInline={newPersonInline}
+        managersActiveSorted={managersActiveSorted}
+        selectedManagerId={selectedManagerId}
+        setSelectedManagerId={setSelectedManagerId}
         projectSuggestions={projectSuggestions}
         taskSuggestions={taskSuggestions}
         currentProjectId={currentProjectId}

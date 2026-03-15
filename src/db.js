@@ -64,6 +64,22 @@ db.version(13)
     });
   });
 
+// v14：managerUsage 追加（担当者の現場ごと使用頻度）
+db.version(14)
+  .stores({
+    meta: "&key",
+    projects: "++id,&name,createdAt,deletedAt",
+    tasks: "++id,&name,createdAt,deletedAt",
+    people: "++id,&name,createdAt,deletedAt",
+    events: "++id,date,bucket,projectId,taskId,order,deletedAt,createdAt",
+    taskUsage: "[projectId+taskId],projectId,taskId,count,updatedAt",
+    peopleUsage: "&personId,count,updatedAt",
+    managerUsage: "[projectId+managerId],projectId,managerId,count,updatedAt",
+  })
+  .upgrade(async () => {
+    // 初期化不要
+  });
+
 // 現場
 export const INITIAL_PROJECTS = [
   "休み",
