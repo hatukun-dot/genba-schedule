@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { db, seedIfNeeded, COLOR_PALETTE } from "./db";
 import { AuthGate, useAuth } from "./components/auth/AuthGate";
 import { MasterModal } from "./components/modals/MasterModal";
+import { ExcelModal } from "./components/modals/ExcelModal";
 import { DayModal } from "./components/modals/DayModal";
 import { MoveModal } from "./components/modals/MoveModal";
 import { MultiAddModal } from "./components/modals/MultiAddModal";
@@ -11,7 +12,7 @@ import { MonthGrid } from "./components/month/MonthGrid";
 import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
 import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
-import { normalizeEventRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
+import { normalizeEventRow, normalizeBillingTargetRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
 import * as api from "./services/api";
 import { isHolidayDate } from "./utils/holiday";
 
@@ -78,6 +79,10 @@ function AppInner() {
   const [tasks, setTasks] = useState([]); // 作業（削除済み含む）
   const [peopleAll, setPeopleAll] = useState([]); // 人員（削除済み含む）
   const [managersAll, setManagersAll] = useState([]); // 担当者（削除済み含む）
+  const [billingTargets, setBillingTargets] = useState([]); // 請求先
+
+  // --- Excel出力モーダル ---
+  const [isExcelOpen, setIsExcelOpen] = useState(false);
 
   // ★人員累計使用回数（personId -> count） Dexieに残す（無ければ空）
   const [peopleUsageMap, setPeopleUsageMap] = useState({});
@@ -141,7 +146,6 @@ function AppInner() {
   const [newGenbaName, setNewGenbaName] = useState("");
   const [newTaskName, setNewTaskName] = useState("");
   const [newPersonName, setNewPersonName] = useState("");
-  const [newManagerName, setNewManagerName] = useState("");
   const [newPersonInline, setNewPersonInline] = useState("");
   const [editKind, setEditKind] = useState(null); // "genba"|"task"|"people"|null
   const [editId, setEditId] = useState(null);
@@ -398,7 +402,6 @@ function AppInner() {
     setNewGenbaName("");
     setNewTaskName("");
     setNewPersonName("");
-    setNewManagerName("");
     setNewPersonInline("");
     setEditKind(null);
     setEditId(null);
@@ -409,6 +412,8 @@ function AppInner() {
     setTasks([]);
     setPeopleAll([]);
     setManagersAll([]);
+    setBillingTargets([]);
+    setIsExcelOpen(false);
     setEventsByKey({});
     setTaskUsageMap({});
     setProjectUsageMap({});
@@ -472,8 +477,8 @@ function AppInner() {
   }, [reloadTick]);
 
   async function reloadMasters() {
-    const [pRes, tRes, peRes, mgRes] = await Promise.all([
-      api.fetchProjects(), api.fetchTasks(), api.fetchPeople(), api.fetchManagers()
+    const [pRes, tRes, peRes, mgRes, btRes] = await Promise.all([
+      api.fetchProjects(), api.fetchTasks(), api.fetchPeople(), api.fetchManagers(), api.fetchBillingTargets()
     ]);
 
     if (pRes.error) {
@@ -501,6 +506,7 @@ function AppInner() {
     const t = (tRes.data || []).map(normalizeTaskRow);
     const peAll = (peRes.data || []).map(normalizePeopleRow);
     const mgAll = (mgRes.data || []).map(normalizeManagerRow);
+    const btAll = (btRes.data || []).map(normalizeBillingTargetRow);
 
     p.sort((a, b) => {
       const ra = pinRank(a.name);
@@ -513,6 +519,18 @@ function AppInner() {
     setTasks(t);
     setPeopleAll(peAll);
     setManagersAll(mgAll);
+
+    // 請求先：未登録の現場は自動で請求先として追加
+    const existingProjectIds = new Set(btAll.map((b) => b.projectId));
+    const missing = p.filter((proj) => !proj.deletedAt && !existingProjectIds.has(proj.id));
+    if (missing.length > 0) {
+      const now = new Date().toISOString();
+      await Promise.all(missing.map((proj) => api.createBillingTarget({ name: proj.name, projectId: proj.id, createdAt: now })));
+      const { data: btRefresh } = await api.fetchBillingTargets();
+      setBillingTargets((btRefresh || []).map(normalizeBillingTargetRow));
+    } else {
+      setBillingTargets(btAll);
+    }
   }
 
   async function reloadTaskUsage() {
@@ -1423,26 +1441,6 @@ function AppInner() {
           console.error(e);
           pushError("人員の追加に失敗しました", e?.message || String(e));
         }
-        return;
-      }
-      if (kind === "manager") {
-        const name = norm(newManagerName);
-        if (!name) return;
-        try {
-          const hitDeleted = managersAll.find((m) => m.name === name && m.deletedAt);
-          if (hitDeleted) {
-            const { error } = await api.restoreManagerById(hitDeleted.id);
-            if (error) throw error;
-          } else {
-            const { error } = await api.createManager({ name, createdAt });
-            if (error) throw error;
-          }
-          setNewManagerName("");
-          await reloadMasters();
-        } catch (e) {
-          console.error(e);
-          pushError("担当者の追加に失敗しました", e?.message || String(e));
-        }
       }
     });
   }
@@ -1465,10 +1463,6 @@ function AppInner() {
         }
         if (editKind === "people") {
           const { error } = await api.updatePersonName({ id: editId, name });
-          if (error) throw error;
-        }
-        if (editKind === "manager") {
-          const { error } = await api.updateManagerName({ id: editId, name });
           if (error) throw error;
         }
 
@@ -1510,13 +1504,6 @@ function AppInner() {
 
         if (kind === "task") {
           const { error } = await api.softDeleteTaskById({ id, nowIso: now });
-          if (error) throw error;
-          await reloadMasters();
-          setReloadTick((x) => x + 1);
-          return;
-        }
-        if (kind === "manager") {
-          const { error } = await api.softDeleteManagerById({ id, nowIso: now });
           if (error) throw error;
           await reloadMasters();
           setReloadTick((x) => x + 1);
@@ -1572,24 +1559,46 @@ function AppInner() {
     });
   }
 
-  async function restoreManager(id) {
-    await guard(async () => {
-      clearError();
-
-      const { error } = await api.restoreManagerById(id);
-      if (error) {
-        console.error(error);
-        pushError("復元に失敗しました", error?.message || String(error));
-        return;
-      }
-      await reloadMasters();
-      setReloadTick((x) => x + 1);
-    });
-  }
-
   const deletedPeople = useMemo(() => (peopleAll || []).filter((p) => p.deletedAt), [peopleAll]);
   const managersActive = useMemo(() => (managersAll || []).filter((m) => !m.deletedAt), [managersAll]);
   const deletedManagers = useMemo(() => (managersAll || []).filter((m) => m.deletedAt), [managersAll]);
+
+  // ============================================================
+  // 請求先管理
+  // ============================================================
+  async function updateBillingTarget(id, patch) {
+    const dbPatch = {};
+    if ("name" in patch) dbPatch.name = patch.name;
+    if ("closingType" in patch) dbPatch.closing_type = patch.closingType;
+    if ("outputType" in patch) dbPatch.output_type = patch.outputType;
+    if ("billingType" in patch) dbPatch.billing_type = patch.billingType;
+    if ("groupByManager" in patch) dbPatch.group_by_manager = patch.groupByManager;
+    if ("unitPrice" in patch) dbPatch.unit_price = patch.unitPrice;
+
+    const { error } = await api.updateBillingTarget({ id, patch: dbPatch });
+    if (error) {
+      pushError("請求先の更新に失敗しました", error?.message || String(error));
+      return;
+    }
+    setBillingTargets((prev) => prev.map((t) => t.id === id ? { ...t, ...patch } : t));
+  }
+
+  async function addBillingTarget() {
+    const name = `新しい請求先${billingTargets.length + 1}`;
+    const now = new Date().toISOString();
+    const { data, error } = await api.createBillingTarget({ name, projectId: null, createdAt: now });
+    if (error) {
+      pushError("請求先の追加に失敗しました", error?.message || String(error));
+      return;
+    }
+    if (data) setBillingTargets((prev) => [...prev, normalizeBillingTargetRow(data)]);
+  }
+
+  async function mergeBillingTargets(targetId, sourceIds) {
+    const now = new Date().toISOString();
+    await Promise.all(sourceIds.map((id) => api.softDeleteBillingTargetById({ id, nowIso: now })));
+    setBillingTargets((prev) => prev.filter((t) => !sourceIds.includes(t.id)));
+  }
 
   const projectSuggestions = useMemo(() => {
     const q = norm(projectInput);
@@ -1905,7 +1914,7 @@ function AppInner() {
         toggleMenu={toggleMenu}
         closeMenu={closeMenu}
         openMaster={openMaster}
-        exportXlsxForCurrentMonth={exportXlsxForCurrentMonth}
+        openExcelModal={() => setIsExcelOpen(true)}
         handleLogout={handleLogout}
         monthLabel={monthLabel}
         year={year}
@@ -2037,6 +2046,21 @@ function AppInner() {
         moveEventToTbdInstant={moveEventToTbdInstant}
         moveEventToYmdInstant={moveEventToYmdInstant}
         closeMoveModal={closeMoveModal}
+        onSurfaceClick={onSurfaceClick}
+      />
+
+      <ExcelModal
+        open={isExcelOpen}
+        monthLabel={monthLabel}
+        billingTargets={billingTargets}
+        onUpdateBillingTarget={updateBillingTarget}
+        onAddBillingTarget={addBillingTarget}
+        onMergeBillingTargets={mergeBillingTargets}
+        onExport={(ids) => {
+          // TODO: Excel生成ロジック（Excelファイル確認後に実装）
+          console.log("export", ids);
+        }}
+        onClose={() => setIsExcelOpen(false)}
         onSurfaceClick={onSurfaceClick}
       />
 

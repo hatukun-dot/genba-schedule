@@ -9,7 +9,7 @@ export function MonthHeader({
   toggleMenu,
   closeMenu,
   openMaster,
-  exportXlsxForCurrentMonth,
+  openExcelModal,
   handleLogout,
   monthLabel,
   year,
@@ -30,7 +30,7 @@ export function MonthHeader({
               <button className="menuBtn" onClick={() => (openMaster("genba"), closeMenu())}>
                 マスタ
               </button>
-              <button className="menuBtn" onClick={() => (exportXlsxForCurrentMonth(), closeMenu())}>
+              <button className="menuBtn" onClick={() => (openExcelModal(), closeMenu())}>
                 Excel出力
               </button>
 
