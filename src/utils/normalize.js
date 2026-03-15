@@ -55,6 +55,7 @@ export function normalizeEventRow(r) {
     bucket: r.bucket ?? null,
     projectId: toIntOrNull(r.project_id ?? r.projectId ?? null),
     taskId: toIntOrNull(r.task_id ?? r.taskId ?? null),
+    managerId: toIntOrNull(r.manager_id ?? r.managerId ?? null),
     note: r.note ?? null,
     peopleCount: fromDbPeopleCount(r.people_count ?? r.peopleCount ?? null),
     peopleIds: uniqNumArray(r.people_ids ?? r.peopleIds ?? []),
@@ -66,3 +67,28 @@ export function normalizeEventRow(r) {
   };
 }
 
+export function normalizeManagerRow(r) {
+  return {
+    ...r,
+    id: toIntOrNull(r.id),
+    name: r.name,
+    createdAt: r.created_at ?? r.createdAt ?? null,
+    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
+  };
+}
+
+export function normalizeBillingTargetRow(r) {
+  return {
+    ...r,
+    id: toIntOrNull(r.id),
+    name: r.name,
+    projectId: toIntOrNull(r.project_id ?? r.projectId ?? null),
+    closingType: r.closing_type ?? r.closingType ?? '月末締め',
+    outputType: r.output_type ?? r.outputType ?? 'リストのみ',
+    billingType: r.billing_type ?? r.billingType ?? '人工',
+    groupByManager: r.group_by_manager ?? r.groupByManager ?? false,
+    unitPrice: r.unit_price ?? r.unitPrice ?? null,
+    createdAt: r.created_at ?? r.createdAt ?? null,
+    deletedAt: r.deleted_at ?? r.deletedAt ?? null,
+  };
+}

@@ -98,3 +98,45 @@ export async function fetchProjectUsageRows() {
   return await supabase.from("events").select("project_id, deleted_at");
 }
 
+// ========== Managers（担当者） ==========
+export async function fetchManagers() {
+  return await supabase.from("managers").select("*").order("name", { ascending: true });
+}
+
+export async function createManager({ name, createdAt }) {
+  return await supabase.from("managers").insert([{ name, created_at: createdAt, deleted_at: null }]).select("*").single();
+}
+
+export async function updateManagerName({ id, name }) {
+  return await supabase.from("managers").update({ name }).eq("id", id);
+}
+
+export async function softDeleteManagerById({ id, nowIso }) {
+  return await supabase.from("managers").update({ deleted_at: nowIso }).eq("id", id);
+}
+
+export async function restoreManagerById(id) {
+  return await supabase.from("managers").update({ deleted_at: null }).eq("id", id);
+}
+
+// ========== BillingTargets（請求先） ==========
+export async function fetchBillingTargets() {
+  return await supabase.from("billing_targets").select("*").is("deleted_at", null);
+}
+
+export async function createBillingTarget({ name, projectId, createdAt }) {
+  return await supabase.from("billing_targets").insert([{
+    name,
+    project_id: projectId,
+    created_at: createdAt,
+    deleted_at: null,
+  }]).select("*").single();
+}
+
+export async function updateBillingTarget({ id, patch }) {
+  return await supabase.from("billing_targets").update(patch).eq("id", id);
+}
+
+export async function softDeleteBillingTargetById({ id, nowIso }) {
+  return await supabase.from("billing_targets").update({ deleted_at: nowIso }).eq("id", id);
+}
