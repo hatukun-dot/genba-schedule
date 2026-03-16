@@ -889,8 +889,8 @@ function AppInner() {
   // popstate（戻るボタン）で最前面のモーダルを1つ閉じる（マウント時に1回だけ登録）
   useEffect(() => {
     const handlePop = () => {
-      const { isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen,
-              closeDay, closeWeek, closeMaster, closeMoveModal, closeMultiAdd } = modalRef.current;
+      const { isDayOpen, isWeekOpen, isMasterOpen, isMoveOpen, isMultiAddOpen, isExcelOpen,
+              closeDay, closeWeek, closeMaster, closeMoveModal, closeMultiAdd, closeExcel } = modalRef.current;
 
       // Move/MultiAddはDayModalの上に乗っているのでviewportはそのまま
       if (isMoveOpen)     { closeMoveModal(); return; }
