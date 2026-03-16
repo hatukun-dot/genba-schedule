@@ -899,15 +899,15 @@ function AppInner() {
       // ExcelModalを閉じる時はズーム解除
       if (isExcelOpen) {
         const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) viewport.setAttribute('content', 'width=1280');
+        if (viewport) viewport.setAttribute('content', 'width=1400');
         closeExcel(); return;
       }
 
       // DayModal/WeekModal/MasterModalを閉じる時はズーム解除
       const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) viewport.setAttribute('content', 'width=1280, initial-scale=1.0');
+      if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
       requestAnimationFrame(() => {
-        if (viewport) viewport.setAttribute('content', 'width=1280');
+        if (viewport) viewport.setAttribute('content', 'width=1400');
       });
 
       if (isDayOpen)    { closeDay();    return; }
@@ -940,11 +940,12 @@ function AppInner() {
     if (Math.abs(dx) < 50) return;
 
     if (isDayOpen) {
-      // 日付画面：左スワイプ=次の日、右スワイプ=前の日
+      // 日付画面：左スワイプ=次の日、右スワイプ=前の日（しきい値50px）
       if (dx < 0) goNextDay();
       else goPrevDay();
     } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
-      // 月画面：左スワイプ=次の月、右スワイプ=前の月
+      // 月画面：しきい値150pxで誤爆防止
+      if (Math.abs(dx) < 150) return;
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
       else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
     }
@@ -1191,6 +1192,11 @@ function AppInner() {
     setIsMultiAddOpen(false);
     resetForm();
     setCopySourceEvent(null); // ★ここでもコピー状態をクリア
+    // コピー実行後に日付選択をリセット
+    setMultiSelectedYmds(new Set());
+    setRangeStartYmd(null);
+    setRangeEndYmd(null);
+    setWeekdaySelected(new Set());
     setReloadTick((x) => x + 1);
   });
 }
@@ -2143,7 +2149,7 @@ function AppInner() {
         }}
         onClose={() => {
           const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) viewport.setAttribute('content', 'width=1280');
+          if (viewport) viewport.setAttribute('content', 'width=1400');
           setIsExcelOpen(false);
         }}
         onSurfaceClick={onSurfaceClick}

@@ -33,7 +33,7 @@ export function ExcelModal({
     if (open) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else {
-      viewport.setAttribute('content', 'width=1280');
+      viewport.setAttribute('content', 'width=1400');
     }
   }, [open]);
 
