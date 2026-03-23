@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
 
@@ -58,11 +58,14 @@ export function DayModal({
   setSelectedManagerId,
 }) {
 
-
-  useEffect(() => {
-    if (!open) return;
-    document.body.style.zoom = '1';
-    return () => { document.body.style.zoom = ''; };
+  useLayoutEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    if (open) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    } else {
+      viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
+    }
   }, [open]);
 
   if (!open || !selectedKey) return null;

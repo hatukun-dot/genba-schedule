@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useState } from "react";
 import { norm } from "../../utils/id";
 
 const CLOSING_TYPES = ["20日締め", "月末締め"];
@@ -27,10 +27,14 @@ export function ExcelModal({
   const [editingNameVal, setEditingNameVal] = useState("");
   const [settingsTargetId, setSettingsTargetId] = useState(null);
 
-  useEffect(() => {
-    if (!open) return;
-    document.body.style.zoom = '1';
-    return () => { document.body.style.zoom = ''; };
+  useLayoutEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    if (open) {
+      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+    } else {
+      viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
+    }
   }, [open]);
 
   if (!open) return null;

@@ -899,7 +899,7 @@ function AppInner() {
       // ExcelModalを閉じる時はズーム解除
       if (isExcelOpen) {
         const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) viewport.setAttribute('content', 'width=1400');
+        if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
         closeExcel(); return;
       }
 
@@ -907,7 +907,7 @@ function AppInner() {
       const viewport = document.querySelector('meta[name="viewport"]');
       if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
       requestAnimationFrame(() => {
-        if (viewport) viewport.setAttribute('content', 'width=1400');
+        if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
       });
 
       if (isDayOpen)    { closeDay();    return; }
@@ -2149,7 +2149,7 @@ function AppInner() {
         }}
         onClose={() => {
           const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) viewport.setAttribute('content', 'width=1400');
+          if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
           setIsExcelOpen(false);
         }}
         onSurfaceClick={onSurfaceClick}
