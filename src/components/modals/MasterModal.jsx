@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect } from "react";
+import React, { useEffect } from "react";
 import { norm } from "../../utils/id";
 
 export function MasterModal({
@@ -42,16 +42,12 @@ export function MasterModal({
   masterEditAnchorRef,
 }) {
   
-  useLayoutEffect(() => {
-    const viewport = document.querySelector('meta[name="viewport"]');
-    if (!viewport) return;
-    if (open) {
-      viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    } else {
-      viewport.setAttribute('content', 'width=1400');
-    }
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.zoom = '1';
+    return () => { document.body.style.zoom = ''; };
   }, [open]);
-  
+
   if (!open) return null;
 
   return (
