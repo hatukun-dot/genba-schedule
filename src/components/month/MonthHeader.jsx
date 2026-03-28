@@ -31,7 +31,7 @@ export function MonthHeader({
                 マスタ
               </button>
               <button className="menuBtn" onClick={() => (openExcelModal(), closeMenu())}>
-                Excel出力
+                請求書出力
               </button>
 
               <div className="sep" />

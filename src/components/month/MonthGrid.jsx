@@ -44,12 +44,7 @@ export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, 
                      )}
                      </div>
 
-                     {/* 右側：他〇件（自動的に右へ行くように CSS で調整します） */}
-                     {rest > 0 && (
-                     <div className="more">
-                     他{rest}件
-                     </div>
-                     )}
+
                      </div>
 
                     <div className="miniList">

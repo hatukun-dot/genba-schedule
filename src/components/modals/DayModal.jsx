@@ -56,6 +56,8 @@ export function DayModal({
   managersActiveSorted,
   selectedManagerId,
   setSelectedManagerId,
+  managerInput,
+  setManagerInput,
 }) {
 
   useLayoutEffect(() => {
@@ -64,7 +66,7 @@ export function DayModal({
     if (open) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else {
-      viewport.setAttribute('content', 'width=1400');
+      viewport.setAttribute('content', 'width=1500');
     }
   }, [open]);
 
@@ -287,6 +289,8 @@ export function DayModal({
                 managersActiveSorted={managersActiveSorted}
                 selectedManagerId={selectedManagerId}
                 setSelectedManagerId={setSelectedManagerId}
+                managerInput={managerInput}
+                setManagerInput={setManagerInput}
               />
             </div>
 
@@ -323,11 +327,9 @@ export function DayModal({
 
 
 // 担当者入力兼検索コンポーネント
-function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedManagerId }) {
-  const [input, setInput] = useState("");
-
+function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedManagerId, managerInput, setManagerInput }) {
   const filtered = (managersActiveSorted || []).filter((m) =>
-    !input || m.name.includes(input)
+    !managerInput || m.name.includes(managerInput)
   );
 
   const selectedManager = (managersActiveSorted || []).find((m) => m.id === selectedManagerId);
@@ -336,8 +338,8 @@ function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedMana
     <>
       <input
         className="input"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
+        value={managerInput}
+        onChange={(e) => setManagerInput(e.target.value)}
         placeholder={selectedManager ? selectedManager.name : "例：田中（空欄OK）"}
         style={{ borderColor: selectedManagerId ? "rgba(0,0,0,.4)" : undefined }}
       />
@@ -349,7 +351,7 @@ function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedMana
               className={`chip ${selectedManagerId === m.id ? "active" : ""}`}
               onClick={() => {
                 setSelectedManagerId(selectedManagerId === m.id ? null : m.id);
-                setInput("");
+                setManagerInput("");
               }}
             >
               {m.name}
@@ -361,7 +363,7 @@ function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedMana
         <button
           className="btn"
           style={{ marginTop: 6, fontSize: 12 }}
-          onClick={() => { setSelectedManagerId(null); setInput(""); }}
+          onClick={() => { setSelectedManagerId(null); setManagerInput(""); }}
         >
           担当者をクリア
         </button>

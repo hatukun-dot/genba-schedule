@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 import { db, seedIfNeeded, COLOR_PALETTE } from "./db";
 import { AuthGate, useAuth } from "./components/auth/AuthGate";
 import { MasterModal } from "./components/modals/MasterModal";
-import { ExcelModal } from "./components/modals/ExcelModal";
+import { BillingModal } from "./components/modals/BillingModal";
 import { DayModal } from "./components/modals/DayModal";
 import { MoveModal } from "./components/modals/MoveModal";
 import { MultiAddModal } from "./components/modals/MultiAddModal";
@@ -166,6 +166,7 @@ function AppInner() {
   const [color, setColor] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
   const [selectedManagerId, setSelectedManagerId] = useState(null);
+  const [managerInput, setManagerInput] = useState("");
 
   // --- 複数日に追加（モーダル） ---
   const [isMultiAddOpen, setIsMultiAddOpen] = useState(false);
@@ -850,9 +851,7 @@ function AppInner() {
 
   function monthCellEvents(key) {
     const list = sortEventsForDisplay(eventsByKey[key] || []);
-    const top = list.slice(0, 6);
-    const rest = list.length - top.length;
-    return { top, rest };
+    return { top: list, rest: 0 };
   }
 
   // People チェックと人数の半連動（nullの時だけ追従）
@@ -925,6 +924,10 @@ function AppInner() {
   const swipeRef = useRef(null);
 
   function handleTouchStart(e) {
+    if (e.touches.length >= 2) {
+      swipeRef.current = null;
+      return;
+    }
     swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }
 
@@ -999,6 +1002,31 @@ function AppInner() {
     return toIntOrNull(data?.id ?? null);
   }
 
+  async function ensureManagerIdOrNull() {
+    const name = norm(managerInput);
+    if (!name) return selectedManagerId ?? null;
+
+    // 既存のアクティブ担当者を検索
+    const hitActive = managersActive.find((m) => m.name === name);
+    if (hitActive) return hitActive.id;
+
+    // 削除済みを復元
+    const hitDeleted = managersAll.find((m) => m.name === name && m.deletedAt);
+    if (hitDeleted) {
+      const { error } = await api.restoreManagerById(hitDeleted.id);
+      if (error) { pushError("担当者の復元に失敗しました", error?.message || String(error)); return hitDeleted.id; }
+      await reloadMasters();
+      return hitDeleted.id;
+    }
+
+    // 新規作成
+    const createdAt = new Date().toISOString();
+    const { data, error } = await api.createManager({ name, createdAt });
+    if (error) { pushError("担当者の作成に失敗しました", error?.message || String(error)); return null; }
+    await reloadMasters();
+    return toIntOrNull(data?.id ?? null);
+  }
+
   async function ensureTaskIdOrNull() {
     const name = norm(taskInput);
     if (!name) return null;
@@ -1041,6 +1069,7 @@ function AppInner() {
     setColor(null);
     setEditingEventId(null);
     setSelectedManagerId(null);
+    setManagerInput("");
     closeMenu();
     dayBodyRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
   }
@@ -1079,6 +1108,7 @@ function AppInner() {
         return;
       }
       const tid = await ensureTaskIdOrNull();
+      const mid = await ensureManagerIdOrNull();
 
       const keyEvents = (eventsByKey[selectedKey] || []).slice().sort(stableEventSort);
       const maxOrder = keyEvents.reduce((m, e) => Math.max(m, Number(e.order ?? 0)), -1);
@@ -1093,7 +1123,7 @@ function AppInner() {
         people_count: toDbPeopleCount(peopleCount),
         people_ids: uniqNumArray(selectedPeopleIds),
         color: color,
-        manager_id: selectedManagerId,
+        manager_id: mid,
         order: maxOrder + 1,
         created_at: now,
         updated_at: now,
@@ -1247,6 +1277,7 @@ function AppInner() {
   }
 
   async function softDeleteEvent(id) {
+    if (!window.confirm('この予定を削除しますか？')) return;
     await guard(async () => {
       clearError();
 
@@ -2134,7 +2165,7 @@ function AppInner() {
         onSurfaceClick={onSurfaceClick}
       />
 
-      <ExcelModal
+      <BillingModal
         open={isExcelOpen}
         monthLabel={monthLabel}
         billingTargets={billingTargets}

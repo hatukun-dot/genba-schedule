@@ -5,7 +5,7 @@ const CLOSING_TYPES = ["20日締め", "月末締め"];
 const OUTPUT_TYPES = ["請求書＋明細書", "請求書兼明細書", "リストのみ", "出力しない"];
 const BILLING_TYPES = ["人工", "現場単位"];
 
-export function ExcelModal({
+export function BillingModal({
   open,
   monthLabel,
   billingTargets,
@@ -119,7 +119,7 @@ export function ExcelModal({
           <button className="btn" onClick={onClose} style={{ whiteSpace: "nowrap" }}>
             ← 戻る
           </button>
-          <div className="modalTitle">Excel出力 {monthLabel}</div>
+          <div className="modalTitle">請求書出力 {monthLabel}</div>
           <div style={{ width: 72 }} />
         </div>
 
@@ -405,7 +405,7 @@ export function ExcelModal({
             disabled={checkedIds.size === 0}
             onClick={() => onExport(Array.from(checkedIds))}
           >
-            Excel出力（{checkedIds.size}件）
+            請求書出力（{checkedIds.size}件）
           </button>
         </div>
       </div>
