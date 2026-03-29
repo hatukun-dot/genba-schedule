@@ -12,7 +12,7 @@ import { MonthGrid } from "./components/month/MonthGrid";
 import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
 import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
-import { normalizeEventRow, normalizeBillingTargetRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount } from "./utils/normalize";
+import { normalizeEventRow, normalizeBillingTargetRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount, fromDbPeopleCount } from "./utils/normalize";
 import * as api from "./services/api";
 import { isHolidayDate } from "./utils/holiday";
 
@@ -339,10 +339,21 @@ function AppInner() {
       return;
     }
 
+    // 楽観的更新：移動元キーから削除して移動先キーに追加
+    setEventsByKey((prev) => {
+      const event = Object.values(prev).flat().find((e) => e.id === moveEventId);
+      if (!event) return prev;
+      const updated = {};
+      for (const [key, list] of Object.entries(prev)) {
+        updated[key] = list.filter((e) => e.id !== moveEventId);
+      }
+      const newEvent = { ...event, date: ymd, bucket: null };
+      updated[ymd] = [...(updated[ymd] || []), newEvent].sort(stableEventSort);
+      return updated;
+    });
     closeMoveModal();
     closeMenu();
-    closeDay(); // 移動したので一旦閉じる（分かりやすさ優先）
-    setReloadTick((x) => x + 1);
+    closeDay();
   }
 
   async function moveEventToTbdInstant() {
@@ -359,10 +370,21 @@ function AppInner() {
       return;
     }
 
+    // 楽観的更新：TBDに移動
+    setEventsByKey((prev) => {
+      const event = Object.values(prev).flat().find((e) => e.id === moveEventId);
+      if (!event) return prev;
+      const updated = {};
+      for (const [key, list] of Object.entries(prev)) {
+        updated[key] = list.filter((e) => e.id !== moveEventId);
+      }
+      const newEvent = { ...event, date: "3000-01-01", bucket: "TBD" };
+      updated["TBD"] = [...(updated["TBD"] || []), newEvent].sort(stableEventSort);
+      return updated;
+    });
     closeMoveModal();
     closeMenu();
     closeDay();
-    setReloadTick((x) => x + 1);
   }
 
   // ============================================================
@@ -462,22 +484,18 @@ function AppInner() {
       } catch {}
 
       await reloadMasters();
-      await reloadTaskUsage();
-      await reloadProjectUsage();
-      await reloadPeopleUsage();
-      await reloadManagerUsage();
+      // usage系は並列で取得
+      await Promise.all([
+        reloadTaskUsage(),
+        reloadProjectUsage(),
+        reloadPeopleUsage(),
+        reloadManagerUsage(),
+      ]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      await reloadProjectUsage();
-      await reloadPeopleUsage();
-      await reloadManagerUsage();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reloadTick]);
+  // usage系はreloadTickで再取得しない（起動時のみ）
 
   async function reloadMasters() {
     const [pRes, tRes, peRes, mgRes, btRes] = await Promise.all([
@@ -1135,19 +1153,30 @@ function AppInner() {
       delete clean.id;
       delete clean.ID;
 
-      const { error } = await api.insertEvent(clean);
+      const { data: insertedData, error } = await api.insertEvent(clean);
       if (error) {
         console.error("addEvent error", error);
         pushError("予定の追加に失敗しました", error?.message || String(error));
         return;
       }
 
-      if (pid && tid) await bumpTaskUsage(pid, tid);
-      await bumpPeopleUsage(selectedPeopleIds, 1);
-      if (pid && selectedManagerId) await bumpManagerUsage(pid, selectedManagerId);
+      // 楽観的更新：DBから再取得せずlocalのstateに直接追加
+      if (insertedData) {
+        const newEvent = normalizeEventRow(Array.isArray(insertedData) ? insertedData[0] : insertedData);
+        setEventsByKey((prev) => {
+          const key = newEvent.bucket === "TBD" ? "TBD" : newEvent.date;
+          const list = [...(prev[key] || []), newEvent].sort(stableEventSort);
+          return { ...prev, [key]: list };
+        });
+      } else {
+        setReloadTick((x) => x + 1);
+      }
+
+      if (pid && tid) bumpTaskUsage(pid, tid);
+      bumpPeopleUsage(selectedPeopleIds, 1);
+      if (pid && mid) bumpManagerUsage(pid, mid);
 
       resetForm();
-      setReloadTick((x) => x + 1);
     });
   }
 
@@ -1267,12 +1296,24 @@ function AppInner() {
         return;
       }
 
-      if (pid && tid) await bumpTaskUsage(pid, tid);
-      await bumpPeopleUsage(selectedPeopleIds, 1);
-      if (pid && selectedManagerId) await bumpManagerUsage(pid, selectedManagerId);
+      // 楽観的更新：localのstateを直接更新
+      setEventsByKey((prev) => {
+        const updated = {};
+        for (const [key, list] of Object.entries(prev)) {
+          updated[key] = list.map((e) =>
+            e.id === editingEventId
+              ? { ...e, projectId: toIntOrNull(pid), taskId: toIntOrNull(tid), note: note.trim() || null, peopleCount: fromDbPeopleCount(toDbPeopleCount(peopleCount)), peopleIds: uniqNumArray(selectedPeopleIds), color, managerId: selectedManagerId }
+              : e
+          );
+        }
+        return updated;
+      });
+
+      if (pid && tid) bumpTaskUsage(pid, tid);
+      bumpPeopleUsage(selectedPeopleIds, 1);
+      if (pid && selectedManagerId) bumpManagerUsage(pid, selectedManagerId);
 
       resetForm();
-      setReloadTick((x) => x + 1);
     });
   }
 
@@ -1288,7 +1329,14 @@ function AppInner() {
         pushError("削除に失敗しました", error?.message || String(error));
         return;
       }
-      setReloadTick((x) => x + 1);
+      // 楽観的更新：localのstateから削除
+      setEventsByKey((prev) => {
+        const updated = {};
+        for (const [key, list] of Object.entries(prev)) {
+          updated[key] = list.filter((e) => e.id !== id);
+        }
+        return updated;
+      });
     });
   }
 
@@ -1307,8 +1355,19 @@ function AppInner() {
         return;
       }
 
+      // 楽観的更新：orderをlocal stateで入れ替え
+      setEventsByKey((prev) => {
+        const updated = {};
+        for (const [key, list] of Object.entries(prev)) {
+          updated[key] = list.map((e) => {
+            if (e.id === a.id) return { ...e, order: bOrder };
+            if (e.id === b.id) return { ...e, order: aOrder };
+            return e;
+          }).sort(stableEventSort);
+        }
+        return updated;
+      });
       closeMenu();
-      setReloadTick((x) => x + 1);
     });
   }
 

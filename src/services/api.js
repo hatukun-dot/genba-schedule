@@ -75,7 +75,7 @@ export async function fetchEventsForExport({ startYmd, endYmdExclusive }) {
 }
 
 export async function insertEvent(row) {
-  return await supabase.from("events").insert([row]);
+  return await supabase.from("events").insert([row]).select("*").single();
 }
 
 export async function updateEventById({ id, patch }) {
@@ -139,8 +139,4 @@ export async function updateBillingTarget({ id, patch }) {
 
 export async function softDeleteBillingTargetById({ id, nowIso }) {
   return await supabase.from("billing_targets").update({ deleted_at: nowIso }).eq("id", id);
-}
-
-export async function setBillingTargetGroup({ id, groupId }) {
-  return await supabase.from("billing_targets").update({ group_id: groupId }).eq("id", id);
 }
