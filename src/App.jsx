@@ -1973,6 +1973,315 @@ function AppInner() {
     XLSX.writeFile(wb, fileName);
   }
 
+  async function exportBillingXlsx(selectedIds, year, monthIndex0) {
+    clearError();
+
+    // 締め日範囲を計算
+    // 選択された請求先の締めタイプを確認（複数選択時は最初の設定に従う）
+    // 各請求先ごとに締め日が異なる可能性があるので、請求先ごとに処理
+
+    const selectedTargets = billingTargets.filter((t) => selectedIds.includes(t.id));
+    if (selectedTargets.length === 0) return;
+
+    // 全請求先の締め期間をカバーする範囲でイベントを取得
+    // 20日締め: 前月21日〜今月20日
+    // 月末締め: 今月1日〜今月末日
+    const has20 = selectedTargets.some((t) => t.closingType === "20日締め");
+    const hasMonthEnd = selectedTargets.some((t) => t.closingType !== "20日締め");
+
+    let fetchStart, fetchEnd;
+    if (has20) {
+      fetchStart = new Date(year, monthIndex0 - 1, 21);
+    } else {
+      fetchStart = new Date(year, monthIndex0, 1);
+    }
+    fetchEnd = new Date(year, monthIndex0 + 1, 1);
+
+    const startYmd = toYmd(fetchStart);
+    const endYmd = toYmd(fetchEnd);
+
+    const { data, error } = await api.fetchEventsForExport({ startYmd, endYmdExclusive: endYmd });
+    if (error) {
+      pushError("請求書出力に失敗しました", error?.message || String(error));
+      return;
+    }
+
+    const allEvents = (data || []).map(normalizeEventRow).filter((e) => e.bucket !== "TBD" && e.date);
+
+    const pById = new Map((projects || []).map((p) => [p.id, p]));
+    const tById = new Map((tasks || []).map((t) => [t.id, t]));
+    const mgById = new Map((managersAll || []).map((m) => [m.id, m]));
+
+    const getProjectName = (id) => {
+      const p = pById.get(toIntOrNull(id));
+      return p ? (p.name ?? "??") : "??";
+    };
+    const getTaskName = (id) => {
+      if (!id) return "";
+      const t = tById.get(toIntOrNull(id));
+      return t ? (t.name ?? "") : "";
+    };
+    const getManagerName = (id) => {
+      if (!id) return null;
+      const m = mgById.get(toIntOrNull(id));
+      return m ? (m.name ?? null) : null;
+    };
+
+    // 月末日を取得
+    const getLastDay = (y, m) => new Date(y, m + 1, 0).getDate();
+
+    const openpyxl_template = "/home/claude/請求書テンプレ.xlsx";
+
+    // 請求先ごとに処理
+    for (const target of selectedTargets) {
+      if (target.outputType === "出力しない") continue;
+
+      // 締め期間を計算
+      let periodStart, periodEnd;
+      if (target.closingType === "20日締め") {
+        periodStart = toYmd(new Date(year, monthIndex0 - 1, 21));
+        periodEnd = toYmd(new Date(year, monthIndex0, 20));
+      } else {
+        // 月末締め
+        const lastDay = getLastDay(year, monthIndex0);
+        periodStart = toYmd(new Date(year, monthIndex0, 1));
+        periodEnd = toYmd(new Date(year, monthIndex0, lastDay));
+      }
+
+      // この請求先に関連するプロジェクトIDを取得
+      // グループ化されている場合は子も含む
+      const relatedTargets = target.groupId === null
+        ? billingTargets.filter((t) => t.id === target.id || t.groupId === target.id)
+        : [target];
+      const relatedProjectIds = new Set(relatedTargets.map((t) => t.projectId).filter(Boolean));
+
+      // 期間内かつ関連プロジェクトのイベントを抽出
+      const targetEvents = allEvents.filter((e) => {
+        if (!relatedProjectIds.has(e.projectId)) return false;
+        if (e.date < periodStart || e.date > periodEnd) return false;
+        return true;
+      });
+
+      if (targetEvents.length === 0) continue;
+
+      // 担当者・現場・作業・メモが同じものをまとめる
+      // キー: managerId + projectId + taskId + note
+      const grouped = new Map();
+      for (const e of targetEvents) {
+        const key = `${e.managerId ?? ""}|${e.projectId ?? ""}|${e.taskId ?? ""}|${e.note ?? ""}`;
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            managerId: e.managerId,
+            projectId: e.projectId,
+            taskId: e.taskId,
+            note: e.note,
+            dates: [],
+            totalPeople: 0,
+          });
+        }
+        const g = grouped.get(key);
+        g.dates.push(e.date);
+        g.totalPeople += Number(e.peopleCount ?? 0);
+      }
+
+      // 日付をフォーマット（連続は〜、非連続は.区切り）
+      const formatDates = (dates) => {
+        const sorted = [...new Set(dates)].sort();
+        const parts = [];
+        let i = 0;
+        while (i < sorted.length) {
+          let j = i;
+          // 連続日付を検出
+          while (j + 1 < sorted.length) {
+            const curr = new Date(sorted[j]);
+            const next = new Date(sorted[j + 1]);
+            const diff = (next - curr) / (1000 * 60 * 60 * 24);
+            if (diff === 1) j++;
+            else break;
+          }
+          const startD = new Date(sorted[i]);
+          const endD = new Date(sorted[j]);
+          const sm = startD.getMonth() + 1;
+          const sd = startD.getDate();
+          const em = endD.getMonth() + 1;
+          const ed = endD.getDate();
+          if (i === j) {
+            parts.push(`${sm}/${sd}`);
+          } else {
+            parts.push(`${sm}/${sd}〜${em}/${ed}`);
+          }
+          i = j + 1;
+        }
+        return parts.join(".");
+      };
+
+      // 行データを構築（担当者でグループ化）
+      const isGrouped = billingTargets.some((t) => t.groupId === target.id);
+      const rows = [];
+
+      // 担当者ごとにまとめる
+      const byManager = new Map();
+      for (const [, g] of grouped) {
+        const mid = g.managerId ?? null;
+        if (!byManager.has(mid)) byManager.set(mid, []);
+        byManager.get(mid).push(g);
+      }
+
+      for (const [mid, items] of byManager) {
+        const managerName = getManagerName(mid);
+        rows.push({ type: "manager", name: managerName });
+
+        for (const item of items) {
+          const projectName = isGrouped ? getProjectName(item.projectId) : null;
+          const taskName = getTaskName(item.taskId);
+          const memo = item.note ? item.note.trim() : "";
+          const dateStr = formatDates(item.dates);
+          const qty = target.billingType === "人工" ? item.totalPeople : 1;
+          const unit = target.billingType === "人工" ? "人" : "式";
+
+          rows.push({
+            type: "item",
+            project: projectName,
+            task: taskName,
+            memo,
+            dateStr,
+            qty,
+            unit,
+            unitPrice: target.unitPrice ?? null,
+          });
+        }
+      }
+
+      // Excelファイルに書き込み（Pythonスクリプト経由）
+      // データをJSONとして渡してPythonで処理
+      const exportData = {
+        targetName: target.name,
+        outputType: target.outputType,
+        closingType: target.closingType,
+        periodEnd,
+        year,
+        rows,
+      };
+
+      // ブラウザからファイル生成はできないのでSheetJSで処理
+      await writeBillingExcel(exportData);
+    }
+  }
+
+  async function writeBillingExcel(exportData) {
+    const { targetName, outputType, closingType, periodEnd, year, rows } = exportData;
+
+    // テンプレートを読み込む必要があるが、ブラウザ環境なのでfetchで取得
+    // 実際にはテンプレートファイルをpublicに置く必要がある
+    // まずはSheetJSでテンプレートなしで生成する暫定実装
+
+    const isSanei = targetName === "サンエイ株式会社営統事業部建設課";
+    const isCombo = outputType === "請求書兼明細書";
+
+    // 締め日
+    const periodEndDate = new Date(periodEnd);
+    const closingDay = closingType === "20日締め" ? 20 : periodEndDate.getDate();
+
+    // 行を組み立て
+    const lineRows = [];
+    let rowNum = 17; // 開始行（1-indexed）
+
+    for (const row of rows) {
+      if (row.type === "manager" && row.name) {
+        lineRows.push({ row: rowNum, label: `${row.name}　様`, date: null, qty: null, unit: null, price: null });
+        rowNum++;
+      } else if (row.type === "item") {
+        const parts = [];
+        if (row.project) parts.push(row.project);
+        if (row.task) parts.push(row.task);
+        if (row.memo) parts.push(row.memo);
+        const label = parts.join("　");
+        lineRows.push({
+          row: rowNum,
+          label,
+          date: row.dateStr,
+          qty: row.qty,
+          unit: row.unit,
+          price: row.unitPrice,
+        });
+        rowNum++;
+      }
+    }
+
+    // SheetJSでテンプレートファイルを読み込んで書き込む
+    // テンプレートをpublic/に配置している前提
+    try {
+      const resp = await fetch("/請求書テンプレ.xlsx");
+      if (!resp.ok) throw new Error("テンプレート取得失敗");
+      const arrayBuf = await resp.arrayBuffer();
+      const wb = XLSX.read(arrayBuf, { type: "array" });
+
+      const sheetName = isSanei
+        ? "サンエイ株式会社営統事業部建設課"
+        : isCombo
+        ? "請求書兼明細書"
+        : "請求書＋明細書";
+
+      const ws = wb.Sheets[sheetName];
+      if (!ws) throw new Error(`シート ${sheetName} が見つかりません`);
+
+      // 請求先をA1/L1に設定（サンエイは不要）
+      if (!isSanei) {
+        XLSX.utils.sheet_add_aoa(ws, [[targetName]], { origin: "A1" });
+        if (!isCombo) {
+          XLSX.utils.sheet_add_aoa(ws, [[targetName]], { origin: "L1" });
+        }
+      }
+
+      // 日付（西暦・締め日）
+      if (isCombo) {
+        XLSX.utils.sheet_add_aoa(ws, [[year]], { origin: "I4" });
+        XLSX.utils.sheet_add_aoa(ws, [[closingDay]], { origin: "J4" });
+      } else {
+        XLSX.utils.sheet_add_aoa(ws, [[year]], { origin: "I4" });
+        XLSX.utils.sheet_add_aoa(ws, [[closingDay]], { origin: "J4" });
+        XLSX.utils.sheet_add_aoa(ws, [[year]], { origin: "T4" });
+        XLSX.utils.sheet_add_aoa(ws, [[closingDay]], { origin: "U4" });
+      }
+
+      // 明細行を書き込む
+      const labelCol = isCombo ? "A" : "L";
+      const dateCol = isCombo ? "E" : "P";
+      const qtyCol = isCombo ? "F" : "Q";
+      const unitCol = isCombo ? "G" : "R";
+      const priceCol = isCombo ? "H" : "S";
+
+      for (const line of lineRows) {
+        const r = line.row;
+        XLSX.utils.sheet_add_aoa(ws, [[line.label]], { origin: `${labelCol}${r}` });
+        if (line.date) XLSX.utils.sheet_add_aoa(ws, [[line.date]], { origin: `${dateCol}${r}` });
+        if (line.qty !== null) XLSX.utils.sheet_add_aoa(ws, [[line.qty]], { origin: `${qtyCol}${r}` });
+        if (line.unit) XLSX.utils.sheet_add_aoa(ws, [[line.unit]], { origin: `${unitCol}${r}` });
+        if (line.price !== null) XLSX.utils.sheet_add_aoa(ws, [[line.price]], { origin: `${priceCol}${r}` });
+
+        // 請求書＋明細書は左側（請求書側）にも同じ内容を書く
+        if (!isCombo && !isSanei) {
+          XLSX.utils.sheet_add_aoa(ws, [[line.label]], { origin: `A${r}` });
+          if (line.date) XLSX.utils.sheet_add_aoa(ws, [[line.date]], { origin: `E${r}` });
+          if (line.qty !== null) XLSX.utils.sheet_add_aoa(ws, [[line.qty]], { origin: `F${r}` });
+          if (line.unit) XLSX.utils.sheet_add_aoa(ws, [[line.unit]], { origin: `G${r}` });
+          if (line.price !== null) XLSX.utils.sheet_add_aoa(ws, [[line.price]], { origin: `H${r}` });
+        }
+      }
+
+      // シートを単独ブックとして出力
+      const outWb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(outWb, ws, sheetName);
+      const fileName = `${targetName}_${year}年${periodEndDate.getMonth() + 1}月請求書.xlsx`;
+      XLSX.writeFile(outWb, fileName);
+
+    } catch (err) {
+      console.error("請求書生成エラー", err);
+      pushError("請求書の生成に失敗しました", err.message || String(err));
+    }
+  }
+
+
   // 複数日モーダル内：日付クリック
   function onPickDayInMultiModal(ymd) {
     if (!ymdInMultiMonth(ymd)) return;
@@ -2233,10 +2542,7 @@ function AppInner() {
         onAddBillingTarget={addBillingTarget}
         onMergeBillingTargets={mergeBillingTargets}
         onDetachFromGroup={detachFromGroup}
-        onExport={(ids) => {
-          // TODO: Excel生成ロジック（Excelファイル確認後に実装）
-          console.log("export", ids);
-        }}
+        onExport={(ids) => exportBillingXlsx(ids, year, monthIndex0)}
         onClose={() => {
           const viewport = document.querySelector('meta[name="viewport"]');
           if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
