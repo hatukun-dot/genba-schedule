@@ -158,13 +158,9 @@ def generate_invoice(body):
                     "unitPrice": target.get("unitPrice"),
                 })
 
+        is_list_only = target.get("outputType") == "リストのみ"
         is_sanei = target["name"] == SANEI
         is_combo = target.get("outputType") == "請求書兼明細書"
-        tmpl = SANEI if is_sanei else ("請求書兼明細書" if is_combo else "請求書＋明細書")
-
-        ws_src = wb_main[tmpl]
-        ws_new = wb_main.copy_worksheet(ws_src)
-        copy_sheet_styles(ws_src, ws_new)
 
         sname = target["name"][:31]
         base_name = sname
@@ -173,53 +169,98 @@ def generate_invoice(body):
         while sname in existing:
             sname = f"{base_name[:28]}_{n}"
             n += 1
-        ws_new.title = sname
-        ws_new.sheet_view.showZeros = False
 
-        if not is_sanei:
+        if is_list_only:
+            ws_new = wb_main.create_sheet(sname)
+            ws_new.column_dimensions["A"].width = 30
+            ws_new.column_dimensions["B"].width = 12
+            ws_new.column_dimensions["C"].width = 6
+            ws_new.column_dimensions["D"].width = 6
+            ws_new.column_dimensions["E"].width = 10
+
+            # タイトル行
             ws_new["A1"] = target["name"]
+            ws_new["A1"].font = Font(bold=True, size=12)
+            ws_new["A2"] = f"{year}年{period_month}月　{cd}日〆"
+
+            # ヘッダー行
+            thin = Side(style="thin")
+            header_border = Border(left=thin, right=thin, top=thin, bottom=thin)
+            headers = ["品名・内容", "日付", "数量", "単位", "単価"]
+            for ci, h in enumerate(headers, 1):
+                c = ws_new.cell(row=4, column=ci, value=h)
+                c.font = Font(bold=True)
+                c.border = header_border
+                c.alignment = Alignment(horizontal="center")
+
+            # データ行
+            rn = 5
+            for row in line_rows:
+                if row["type"] == "manager" and row.get("name"):
+                    c = ws_new.cell(row=rn, column=1, value=f"{row['name']}　様")
+                    c.font = Font(bold=True)
+                    rn += 1
+                elif row["type"] == "item":
+                    data = [row["label"], row["dateStr"], row["qty"], row["unit"],
+                            row.get("unitPrice")]
+                    for ci, val in enumerate(data, 1):
+                        if val is not None:
+                            c = ws_new.cell(row=rn, column=ci, value=val)
+                            c.border = Border(left=thin, right=thin, top=thin, bottom=thin)
+                    rn += 1
+        else:
+            tmpl = SANEI if is_sanei else ("請求書兼明細書" if is_combo else "請求書＋明細書")
+
+            ws_src = wb_main[tmpl]
+            ws_new = wb_main.copy_worksheet(ws_src)
+            copy_sheet_styles(ws_src, ws_new)
+            ws_new.title = sname
+            ws_new.sheet_view.showZeros = False
+
+            if not is_sanei:
+                ws_new["A1"] = target["name"]
+                if not is_combo:
+                    ws_new["L1"] = target["name"]
+            ws_new["I4"] = f"{year}年"
+            ws_new["J4"] = f"{period_month}月　{cd}日〆"
             if not is_combo:
-                ws_new["L1"] = target["name"]
-        ws_new["I4"] = f"{year}年"
-        ws_new["J4"] = f"{period_month}月　{cd}日〆"
-        if not is_combo:
-            ws_new["T4"] = f"{year}年"
-            ws_new["U4"] = f"{period_month}月　{cd}日〆"
+                ws_new["T4"] = f"{year}年"
+                ws_new["U4"] = f"{period_month}月　{cd}日〆"
 
-        lc, dc, qc, uc, pc2 = ("A", "E", "F", "G", "H") if is_combo else ("L", "P", "Q", "R", "S")
+            lc, dc, qc, uc, pc2 = ("A", "E", "F", "G", "H") if is_combo else ("L", "P", "Q", "R", "S")
 
-        rn = 17
-        for row in line_rows:
-            if rn > 32:
-                break
-            if row["type"] == "manager" and row.get("name"):
-                ws_new[f"{lc}{rn}"] = f"{row['name']}　様"
-                rn += 1
-            elif row["type"] == "item":
-                ws_new[f"{lc}{rn}"] = row["label"]
-                ws_new[f"{dc}{rn}"] = row["dateStr"]
-                ws_new[f"{qc}{rn}"] = row["qty"]
-                ws_new[f"{uc}{rn}"] = row["unit"]
-                if row.get("unitPrice") is not None:
-                    ws_new[f"{pc2}{rn}"] = row["unitPrice"]
-                rn += 1
-
-        if not is_combo:
             rn = 17
             for row in line_rows:
                 if rn > 32:
                     break
                 if row["type"] == "manager" and row.get("name"):
-                    ws_new[f"A{rn}"] = f"{row['name']}　様"
+                    ws_new[f"{lc}{rn}"] = f"{row['name']}　様"
                     rn += 1
                 elif row["type"] == "item":
-                    ws_new[f"A{rn}"] = row["label"]
-                    ws_new[f"E{rn}"] = row["dateStr"]
-                    ws_new[f"F{rn}"] = row["qty"]
-                    ws_new[f"G{rn}"] = row["unit"]
+                    ws_new[f"{lc}{rn}"] = row["label"]
+                    ws_new[f"{dc}{rn}"] = row["dateStr"]
+                    ws_new[f"{qc}{rn}"] = row["qty"]
+                    ws_new[f"{uc}{rn}"] = row["unit"]
                     if row.get("unitPrice") is not None:
-                        ws_new[f"H{rn}"] = row["unitPrice"]
+                        ws_new[f"{pc2}{rn}"] = row["unitPrice"]
                     rn += 1
+
+            if not is_combo:
+                rn = 17
+                for row in line_rows:
+                    if rn > 32:
+                        break
+                    if row["type"] == "manager" and row.get("name"):
+                        ws_new[f"A{rn}"] = f"{row['name']}　様"
+                        rn += 1
+                    elif row["type"] == "item":
+                        ws_new[f"A{rn}"] = row["label"]
+                        ws_new[f"E{rn}"] = row["dateStr"]
+                        ws_new[f"F{rn}"] = row["qty"]
+                        ws_new[f"G{rn}"] = row["unit"]
+                        if row.get("unitPrice") is not None:
+                            ws_new[f"H{rn}"] = row["unitPrice"]
+                        rn += 1
 
         added_sheets.append((sname, target["name"], target.get("outputType", ""), f"{cd}日〆"))
 
