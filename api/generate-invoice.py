@@ -28,6 +28,11 @@ def copy_sheet_styles(ws_src, ws_dst):
     for row in ws_src.iter_rows():
         for src_cell in row:
             if isinstance(src_cell, MergedCell):
+                # MergedCellのボーダーも内部スタイルを直接コピー
+                if hasattr(src_cell, '_style') and src_cell._style:
+                    dst_raw = ws_dst._cells.get((src_cell.row, src_cell.column))
+                    if dst_raw is not None:
+                        dst_raw._style = copy.copy(src_cell._style)
                 continue
             dst_cell = ws_dst.cell(row=src_cell.row, column=src_cell.column)
             if src_cell.has_style:
