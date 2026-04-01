@@ -1,15 +1,38 @@
 import json
 import base64
 import os
+import copy
 import calendar
 from io import BytesIO
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime
 from openpyxl import load_workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+from openpyxl.utils import get_column_letter
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', '請求書テンプレ.xlsx')
 SANEI = "サンエイ株式会社営統事業部建設課"
+
+
+def copy_sheet_styles(ws_src, ws_dst):
+    # 列幅
+    for col, dim in ws_src.column_dimensions.items():
+        ws_dst.column_dimensions[col].width = dim.width
+        ws_dst.column_dimensions[col].hidden = dim.hidden
+    # 行高
+    for row, dim in ws_src.row_dimensions.items():
+        ws_dst.row_dimensions[row].height = dim.height
+        ws_dst.row_dimensions[row].hidden = dim.hidden
+    # セルスタイル
+    for row in ws_src.iter_rows():
+        for src_cell in row:
+            dst_cell = ws_dst.cell(row=src_cell.row, column=src_cell.column)
+            if src_cell.has_style:
+                dst_cell.font = copy.copy(src_cell.font)
+                dst_cell.fill = copy.copy(src_cell.fill)
+                dst_cell.border = copy.copy(src_cell.border)
+                dst_cell.alignment = copy.copy(src_cell.alignment)
+                dst_cell.number_format = src_cell.number_format
 
 
 def fmt_dates(dates):
@@ -133,6 +156,7 @@ def generate_invoice(body):
 
         ws_src = wb_main[tmpl]
         ws_new = wb_main.copy_worksheet(ws_src)
+        copy_sheet_styles(ws_src, ws_new)
 
         sname = target["name"][:31]
         base_name = sname
