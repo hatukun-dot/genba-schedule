@@ -24,23 +24,11 @@ def copy_sheet_styles(ws_src, ws_dst):
     for row, dim in ws_src.row_dimensions.items():
         ws_dst.row_dimensions[row].height = dim.height
         ws_dst.row_dimensions[row].hidden = dim.hidden
-    # セルスタイル
-    for row in ws_src.iter_rows():
-        for src_cell in row:
-            if isinstance(src_cell, MergedCell):
-                # MergedCellのボーダーも内部スタイルを直接コピー
-                if hasattr(src_cell, '_style') and src_cell._style:
-                    dst_raw = ws_dst._cells.get((src_cell.row, src_cell.column))
-                    if dst_raw is not None:
-                        dst_raw._style = copy.copy(src_cell._style)
-                continue
-            dst_cell = ws_dst.cell(row=src_cell.row, column=src_cell.column)
-            if src_cell.has_style:
-                dst_cell.font = copy.copy(src_cell.font)
-                dst_cell.fill = copy.copy(src_cell.fill)
-                dst_cell.border = copy.copy(src_cell.border)
-                dst_cell.alignment = copy.copy(src_cell.alignment)
-                dst_cell.number_format = src_cell.number_format
+    # セルスタイルを内部辞書から直接コピー（MergedCellのボーダーも含む）
+    for (row, col), src_cell in ws_src._cells.items():
+        dst_cell = ws_dst._cells.get((row, col))
+        if dst_cell is not None and hasattr(src_cell, '_style'):
+            dst_cell._style = copy.copy(src_cell._style)
 
 
 def fmt_dates(dates):
@@ -245,22 +233,6 @@ def generate_invoice(body):
                         ws_new[f"{pc2}{rn}"] = row["unitPrice"]
                     rn += 1
 
-            if not is_combo:
-                rn = 17
-                for row in line_rows:
-                    if rn > 32:
-                        break
-                    if row["type"] == "manager" and row.get("name"):
-                        ws_new[f"A{rn}"] = f"{row['name']}　様"
-                        rn += 1
-                    elif row["type"] == "item":
-                        ws_new[f"A{rn}"] = row["label"]
-                        ws_new[f"E{rn}"] = row["dateStr"]
-                        ws_new[f"F{rn}"] = row["qty"]
-                        ws_new[f"G{rn}"] = row["unit"]
-                        if row.get("unitPrice") is not None:
-                            ws_new[f"H{rn}"] = row["unitPrice"]
-                        rn += 1
 
         added_sheets.append((sname, target["name"], target.get("outputType", ""), f"{cd}日〆"))
 
