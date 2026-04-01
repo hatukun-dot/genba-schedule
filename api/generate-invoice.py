@@ -10,7 +10,7 @@ from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
-TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', '請求書テンプレ.xlsx')
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '請求書テンプレ.xlsx')
 SANEI = "サンエイ株式会社営統事業部建設課"
 
 
