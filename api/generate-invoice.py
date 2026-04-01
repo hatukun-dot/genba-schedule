@@ -7,7 +7,7 @@ from io import BytesIO
 from http.server import BaseHTTPRequestHandler
 from datetime import datetime
 from openpyxl import load_workbook
-from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, numbers
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '..', 'public', '請求書テンプレ.xlsx')
