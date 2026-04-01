@@ -9,6 +9,7 @@ from datetime import datetime
 from openpyxl import load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.cell.cell import MergedCell
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), '請求書テンプレ.xlsx')
 SANEI = "サンエイ株式会社営統事業部建設課"
@@ -26,6 +27,8 @@ def copy_sheet_styles(ws_src, ws_dst):
     # セルスタイル
     for row in ws_src.iter_rows():
         for src_cell in row:
+            if isinstance(src_cell, MergedCell):
+                continue
             dst_cell = ws_dst.cell(row=src_cell.row, column=src_cell.column)
             if src_cell.has_style:
                 dst_cell.font = copy.copy(src_cell.font)
@@ -166,6 +169,7 @@ def generate_invoice(body):
             sname = f"{base_name[:28]}_{n}"
             n += 1
         ws_new.title = sname
+        ws_new.sheet_view.showZeros = False
 
         if not is_sanei:
             ws_new["A1"] = target["name"]
