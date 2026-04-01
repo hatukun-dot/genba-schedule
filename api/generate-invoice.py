@@ -147,10 +147,10 @@ def generate_invoice(body):
             ws_new["A1"] = target["name"]
             if not is_combo:
                 ws_new["L1"] = target["name"]
-        ws_new["I4"] = year
+        ws_new["I4"] = f"{year}年"
         ws_new["J4"] = f"{period_month}月　{cd}日〆"
         if not is_combo:
-            ws_new["T4"] = year
+            ws_new["T4"] = f"{year}年"
             ws_new["U4"] = f"{period_month}月　{cd}日〆"
 
         lc, dc, qc, uc, pc2 = ("A", "E", "F", "G", "H") if is_combo else ("L", "P", "Q", "R", "S")
@@ -201,7 +201,7 @@ def generate_invoice(body):
     added_names = {s[0] for s in added_sheets}
     for tmpl_name in ["請求書＋明細書", "請求書兼明細書", SANEI]:
         if tmpl_name in wb_main.sheetnames and tmpl_name not in added_names:
-            del wb_main[tmpl_name]
+            wb_main[tmpl_name].sheet_state = "hidden"
 
     wb_main.move_sheet("INDEX", offset=-len(wb_main.sheetnames) + 1)
 
