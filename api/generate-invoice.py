@@ -101,11 +101,14 @@ def generate_invoice(body):
             if bt.get("groupId") == target["id"]:
                 rtids.add(bt["id"])
         rpids = set()
+        pid_to_bt_name = {}
         for bt in all_bt:
             if bt["id"] in rtids and bt.get("projectId"):
                 rpids.add(bt["projectId"])
+                pid_to_bt_name[bt["projectId"]] = bt["name"]
         if target.get("projectId"):
             rpids.add(target["projectId"])
+            pid_to_bt_name[target["projectId"]] = target["name"]
 
         tevents = [e for e in events if e.get("projectId") in rpids and ps <= e["date"] <= pe]
         if not tevents:
@@ -134,7 +137,7 @@ def generate_invoice(body):
             if mn:
                 line_rows.append({"type": "manager", "name": mn})
             for item in items:
-                pn = projects_map.get(item["projectId"], {}).get("name") if is_grouped else None
+                pn = pid_to_bt_name.get(item["projectId"]) if is_grouped else None
                 tn = tasks_map.get(item["taskId"], {}).get("name", "") if item["taskId"] else ""
                 mo = (item["note"] or "").strip()
                 parts = [x for x in [pn, tn, mo] if x]
