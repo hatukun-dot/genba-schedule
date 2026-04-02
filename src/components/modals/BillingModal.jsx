@@ -37,6 +37,12 @@ export function BillingModal({
     }
   }, [open]);
 
+  useEffect(() => {
+    if (!open) {
+      setCheckedIds(new Set());
+    }
+  }, [open]);
+
   if (!open) return null;
 
   const allTargets = (billingTargets || []);
@@ -138,6 +144,7 @@ export function BillingModal({
                 <button className="btn" onClick={checkAll}>一括</button>
                 <button className="btn" onClick={() => checkClosing("20日締め")}>20日締め</button>
                 <button className="btn" onClick={() => checkClosing("月末締め")}>月末締め</button>
+                <button className="btn" onClick={() => setCheckedIds(new Set())}>解除</button>
               </div>
 
               <div className="eventList">
@@ -403,7 +410,7 @@ export function BillingModal({
           <button
             className="btn primary"
             disabled={checkedIds.size === 0}
-            onClick={() => onExport(Array.from(checkedIds))}
+            onClick={() => { onExport(Array.from(checkedIds)); setCheckedIds(new Set()); }}
           >
             請求書出力（{checkedIds.size}件）
           </button>
