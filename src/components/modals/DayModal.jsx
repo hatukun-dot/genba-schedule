@@ -66,7 +66,11 @@ export function DayModal({
     if (open) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else {
-      viewport.setAttribute('content', 'width=1500');
+      const fitScale = +(window.innerWidth / 1500).toFixed(4);
+      viewport.setAttribute('content', `width=1500, initial-scale=${fitScale}`);
+      requestAnimationFrame(() => {
+        viewport.setAttribute('content', 'width=1500');
+      });
     }
   }, [open]);
 

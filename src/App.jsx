@@ -913,19 +913,10 @@ function AppInner() {
       if (isMoveOpen)     { closeMoveModal(); return; }
       if (isMultiAddOpen) { closeMultiAdd();  return; }
 
-      // ExcelModalを閉じる時はズーム解除
-      if (isExcelOpen) {
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
-        closeExcel(); return;
-      }
+      // ExcelModalを閉じる時はズーム解除（各モーダルのuseLayoutEffectが正しく復元する）
+      if (isExcelOpen) { closeExcel(); return; }
 
       // DayModal/WeekModal/MasterModalを閉じる時はズーム解除
-      const viewport = document.querySelector('meta[name="viewport"]');
-      if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
-      requestAnimationFrame(() => {
-        if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
-      });
 
       if (isDayOpen)    { closeDay();    return; }
       if (isWeekOpen)   { closeWeek();   return; }
@@ -2323,8 +2314,6 @@ function AppInner() {
         onDetachFromGroup={detachFromGroup}
         onExport={(ids) => exportBillingXlsx(ids, year, monthIndex0)}
         onClose={() => {
-          const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) viewport.setAttribute('content', 'width=1400, initial-scale=1.0');
           setIsExcelOpen(false);
         }}
         onSurfaceClick={onSurfaceClick}

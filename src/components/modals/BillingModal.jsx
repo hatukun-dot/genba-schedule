@@ -34,7 +34,11 @@ export function BillingModal({
     if (open) {
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else {
-      viewport.setAttribute('content', 'width=1400');
+      const fitScale = +(window.innerWidth / 1500).toFixed(4);
+      viewport.setAttribute('content', `width=1500, initial-scale=${fitScale}`);
+      requestAnimationFrame(() => {
+        viewport.setAttribute('content', 'width=1500');
+      });
     }
   }, [open]);
 
