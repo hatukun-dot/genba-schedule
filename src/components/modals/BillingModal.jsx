@@ -26,6 +26,7 @@ export function BillingModal({
   const [editingNameId, setEditingNameId] = useState(null);
   const [editingNameVal, setEditingNameVal] = useState("");
   const [settingsTargetId, setSettingsTargetId] = useState(null);
+  const [pendingSettings, setPendingSettings] = useState(null);
 
   useLayoutEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -75,19 +76,45 @@ export function BillingModal({
     });
   }
 
-  // 設定タブ：子を除いた親のみ
-  const settingsTargets = parents;
-  const settingsTarget = settingsTargets.find((t) => t.id === settingsTargetId) ?? null;
+  // ===== 設定タブ =====
+  const settingsTarget = parents.find((t) => t.id === settingsTargetId) ?? null;
 
-  // 統合タブ：親のみを統合先候補に
-  // 統合先を選んだ時、その子をチェック済みで表示
+  function selectSettingsTarget(t) {
+    setSettingsTargetId(t.id);
+    setPendingSettings({
+      unitPrice: t.unitPrice ?? null,
+      closingType: t.closingType,
+      outputType: t.outputType,
+      billingType: t.billingType,
+      groupByManager: t.groupByManager ?? false,
+    });
+  }
+
+  async function saveSettings() {
+    if (settingsTargetId && pendingSettings) {
+      await onUpdateBillingTarget(settingsTargetId, pendingSettings);
+    }
+    setSettingsTargetId(null);
+    setPendingSettings(null);
+  }
+
+  function cancelSettings() {
+    setSettingsTargetId(null);
+    setPendingSettings(null);
+  }
+
+  // ===== グループタブ =====
   function onSelectMergeTarget(id) {
     setMergeTargetId(id);
     const children = childrenOf(id);
     setMergeSourceIds(new Set(children.map((c) => c.id)));
   }
 
-  // 統合実行：チェックありは統合先のグループに追加、チェックなしは分離
+  function cancelMerge() {
+    setMergeTargetId(null);
+    setMergeSourceIds(new Set());
+  }
+
   async function executeMerge() {
     if (!mergeTargetId) return;
     const children = childrenOf(mergeTargetId);
@@ -113,10 +140,12 @@ export function BillingModal({
   // 統合元候補：親のうち統合先以外 ＋ 統合先の子（分離用）
   const mergeSourceCandidates = mergeTargetId
     ? [
-        ...childrenOf(mergeTargetId), // 既存の子（チェック済みで表示、外すと分離）
-        ...parents.filter((t) => t.id !== mergeTargetId && !t.groupId), // 他の親
+        ...childrenOf(mergeTargetId),
+        ...parents.filter((t) => t.id !== mergeTargetId && !t.groupId),
       ]
     : [];
+
+  const mergeTarget = parents.find((t) => t.id === mergeTargetId) ?? null;
 
   return (
     <div className="overlay" role="dialog" aria-modal="true" onClick={onSurfaceClick}>
@@ -152,7 +181,6 @@ export function BillingModal({
                   const children = childrenOf(t.id);
                   const hasChildren = children.length > 0;
                   const isExpanded = expandedGroupIds.has(t.id);
-                  // 現場名と請求先名が違う場合は（現場名）を表示
                   const linkedProject = t.projectId
                     ? (projects || []).find((p) => p.id === t.projectId)
                     : null;
@@ -263,79 +291,115 @@ export function BillingModal({
           {/* ===== 設定タブ ===== */}
           {tab === "settings" && (
             <>
-              <div className="field" style={{ marginBottom: 14 }}>
-                <div className="label">設定する請求先</div>
-                <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
-                  {settingsTargets.map((t) => (
-                    <button
+              {/* 請求先未選択：一覧表示 */}
+              {!settingsTargetId && (
+                <div className="eventList">
+                  {parents.map((t) => (
+                    <div
                       key={t.id}
-                      className={`chip ${settingsTargetId === t.id ? "active" : ""}`}
-                      onClick={() => setSettingsTargetId(t.id)}
+                      className="eventRow"
+                      style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                      onClick={() => selectSettingsTarget(t)}
                     >
-                      {t.name}
-                    </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {t.name}
+                        </div>
+                        <div style={{ fontSize: 12, color: "rgba(0,0,0,.55)" }}>
+                          {t.closingType}・{t.outputType}・{t.billingType}
+                          {t.groupByManager ? "・担当者別" : ""}
+                        </div>
+                      </div>
+                      <span style={{ color: "rgba(0,0,0,.35)", fontSize: 18 }}>›</span>
+                    </div>
                   ))}
                 </div>
-              </div>
+              )}
 
-              {settingsTarget && (
-                <div className="form">
-                  <div className="field">
-                    <div className="label">単価（空欄可）</div>
-                    <input
-                      className="input"
-                      type="number"
-                      value={settingsTarget.unitPrice ?? ""}
-                      placeholder="例：15000"
-                      onChange={(e) => {
-                        const v = e.target.value === "" ? null : Number(e.target.value);
-                        onUpdateBillingTarget(settingsTarget.id, { unitPrice: v });
-                      }}
-                    />
+              {/* 請求先選択後：設定フォーム */}
+              {settingsTargetId && pendingSettings && (
+                <>
+                  {/* 選択中の請求先をトップ表示 */}
+                  <div style={{ fontWeight: 900, fontSize: 16, padding: "10px 12px", background: "rgba(0,0,0,.05)", borderRadius: 10, marginBottom: 16 }}>
+                    {settingsTarget?.name}
                   </div>
-                  <div className="field">
-                    <div className="label">締め日</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {CLOSING_TYPES.map((ct) => (
-                        <button key={ct} className={`btn ${settingsTarget.closingType === ct ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { closingType: ct })}>
-                          {ct}
-                        </button>
-                      ))}
+
+                  <div className="form">
+                    <div className="field">
+                      <div className="label">単価（空欄可）</div>
+                      <input
+                        className="input"
+                        type="number"
+                        value={pendingSettings.unitPrice ?? ""}
+                        placeholder="例：15000"
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? null : Number(e.target.value);
+                          setPendingSettings((prev) => ({ ...prev, unitPrice: v }));
+                        }}
+                      />
+                    </div>
+                    <div className="field">
+                      <div className="label">締め日</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {CLOSING_TYPES.map((ct) => (
+                          <button
+                            key={ct}
+                            className={`btn ${pendingSettings.closingType === ct ? "primary" : ""}`}
+                            onClick={() => setPendingSettings((prev) => ({ ...prev, closingType: ct }))}
+                          >
+                            {ct}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="field">
+                      <div className="label">出力方式</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {OUTPUT_TYPES.map((ot) => (
+                          <button
+                            key={ot}
+                            className={`btn ${pendingSettings.outputType === ot ? "primary" : ""}`}
+                            onClick={() => setPendingSettings((prev) => ({ ...prev, outputType: ot }))}
+                          >
+                            {ot}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="field">
+                      <div className="label">請求方式</div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {BILLING_TYPES.map((bt) => (
+                          <button
+                            key={bt}
+                            className={`btn ${pendingSettings.billingType === bt ? "primary" : ""}`}
+                            onClick={() => setPendingSettings((prev) => ({ ...prev, billingType: bt }))}
+                          >
+                            {bt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="field">
+                      <div className="label">担当者ごとにまとめる</div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          className={`btn ${pendingSettings.groupByManager ? "primary" : ""}`}
+                          onClick={() => setPendingSettings((prev) => ({ ...prev, groupByManager: true }))}
+                        >ON</button>
+                        <button
+                          className={`btn ${!pendingSettings.groupByManager ? "primary" : ""}`}
+                          onClick={() => setPendingSettings((prev) => ({ ...prev, groupByManager: false }))}
+                        >OFF</button>
+                      </div>
                     </div>
                   </div>
-                  <div className="field">
-                    <div className="label">出力方式</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {OUTPUT_TYPES.map((ot) => (
-                        <button key={ot} className={`btn ${settingsTarget.outputType === ot ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { outputType: ot })}>
-                          {ot}
-                        </button>
-                      ))}
-                    </div>
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+                    <button className="btn primary" style={{ flex: 1 }} onClick={saveSettings}>保存</button>
+                    <button className="btn" style={{ flex: 1 }} onClick={cancelSettings}>キャンセル</button>
                   </div>
-                  <div className="field">
-                    <div className="label">請求方式</div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {BILLING_TYPES.map((bt) => (
-                        <button key={bt} className={`btn ${settingsTarget.billingType === bt ? "primary" : ""}`}
-                          onClick={() => onUpdateBillingTarget(settingsTarget.id, { billingType: bt })}>
-                          {bt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="field">
-                    <div className="label">担当者ごとにまとめる</div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button className={`btn ${settingsTarget.groupByManager ? "primary" : ""}`}
-                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: true })}>ON</button>
-                      <button className={`btn ${!settingsTarget.groupByManager ? "primary" : ""}`}
-                        onClick={() => onUpdateBillingTarget(settingsTarget.id, { groupByManager: false })}>OFF</button>
-                    </div>
-                  </div>
-                </div>
+                </>
               )}
             </>
           )}
@@ -343,28 +407,45 @@ export function BillingModal({
           {/* ===== グループタブ ===== */}
           {tab === "merge" && (
             <>
-              <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 12 }}>
-                グループ親を選んで、まとめる請求先にチェックを入れてください。既存のチェックを外して実行すると分離されます。
-              </div>
+              {/* グループ親未選択：一覧表示 */}
+              {!mergeTargetId && (
+                <>
+                  <div style={{ color: "rgba(0,0,0,.65)", fontSize: 13, marginBottom: 12 }}>
+                    グループ親を選んで、まとめる請求先にチェックを入れてください。
+                  </div>
+                  <div className="eventList">
+                    {parents.map((t) => (
+                      <div
+                        key={t.id}
+                        className="eventRow"
+                        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                        onClick={() => onSelectMergeTarget(t.id)}
+                      >
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {t.name}
+                          </div>
+                          {childrenOf(t.id).length > 0 && (
+                            <div style={{ fontSize: 12, color: "rgba(0,0,0,.45)" }}>
+                              {childrenOf(t.id).map((c) => c.name).join("・")}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ color: "rgba(0,0,0,.35)", fontSize: 18 }}>›</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
-              <div className="field" style={{ marginBottom: 14 }}>
-                <div className="label">グループ親</div>
-                <div className="chips" style={{ gridTemplateColumns: "repeat(3, 1fr)", maxHeight: 120 }}>
-                  {parents.map((t) => (
-                    <button
-                      key={t.id}
-                      className={`chip ${mergeTargetId === t.id ? "active" : ""}`}
-                      onClick={() => onSelectMergeTarget(t.id)}
-                    >
-                      {t.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+              {/* グループ親選択後：メンバー編集 */}
               {mergeTargetId && (
-                <div className="field" style={{ marginBottom: 14 }}>
-                  <div className="label">グループに含める請求先</div>
+                <>
+                  {/* 選択中のグループ親をトップ表示 */}
+                  <div style={{ fontWeight: 900, fontSize: 16, padding: "10px 12px", background: "rgba(0,0,0,.05)", borderRadius: 10, marginBottom: 16 }}>
+                    {mergeTarget?.name}
+                  </div>
+
                   <div style={{ color: "rgba(0,0,0,.55)", fontSize: 12, marginBottom: 8 }}>
                     ※チェックあり＝グループに含む　チェックなし＝グループから外す
                   </div>
@@ -393,14 +474,12 @@ export function BillingModal({
                       );
                     })}
                   </div>
-                  <button
-                    className="btn primary"
-                    style={{ marginTop: 12 }}
-                    onClick={executeMerge}
-                  >
-                    実行
-                  </button>
-                </div>
+
+                  <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                    <button className="btn primary" style={{ flex: 1 }} onClick={executeMerge}>実行</button>
+                    <button className="btn" style={{ flex: 1 }} onClick={cancelMerge}>キャンセル</button>
+                  </div>
+                </>
               )}
             </>
           )}
