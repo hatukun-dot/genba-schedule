@@ -1411,7 +1411,7 @@ function AppInner() {
       const d = fromYmd(weekStartYmd);
       setMonthCursor(new Date(d.getFullYear(), d.getMonth(), 1));
     }
-    closeWeek();
+    history.go(-1); // popstateがcloseWeek()を呼ぶ（ナビゲーションでズームリセット）
   }
   function prevWeek() {
     if (!weekStartYmd) return;
@@ -2224,7 +2224,7 @@ function AppInner() {
         setEditName={setEditName}
         addMaster={addMaster}
         saveMasterEdit={saveMasterEdit}
-        closeMaster={closeMaster}
+        closeMaster={() => history.go(-1)}
         closeMenu={closeMenu}
         onSurfaceClick={onSurfaceClick}
         masterBodyRef={masterBodyRef}
@@ -2313,9 +2313,7 @@ function AppInner() {
         onMergeBillingTargets={mergeBillingTargets}
         onDetachFromGroup={detachFromGroup}
         onExport={(ids) => exportBillingXlsx(ids, year, monthIndex0)}
-        onClose={() => {
-          setIsExcelOpen(false);
-        }}
+        onClose={() => history.go(-1)}
         onSurfaceClick={onSurfaceClick}
       />
 

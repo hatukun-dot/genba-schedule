@@ -30,7 +30,6 @@ export function DayModal({
   toggleMenu,
   closeMenu,
   setMonthCursor,
-  closeDay,
   goPrevDay,
   goNextDay,
   eventLabel,
@@ -89,7 +88,7 @@ export function DayModal({
               onClick={() => {
                 const d = selectedKey !== "TBD" ? fromYmd(selectedKey) : new Date();
                 setMonthCursor(new Date(d.getFullYear(), d.getMonth(), 1));
-                closeDay();
+                history.go(-1); // popstateがcloseDay()を呼ぶ（ナビゲーションでズームリセット）
               }}
             >
               ←月
