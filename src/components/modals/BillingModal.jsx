@@ -140,11 +140,11 @@ export function BillingModal({
           {/* ===== 請求先タブ ===== */}
           {tab === "list" && (
             <>
-              <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-                <button className="btn" onClick={checkAll}>一括</button>
-                <button className="btn" onClick={() => checkClosing("20日締め")}>20日締め</button>
-                <button className="btn" onClick={() => checkClosing("月末締め")}>月末締め</button>
-                <button className="btn" onClick={() => setCheckedIds(new Set())}>解除</button>
+              <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+                <button className="btn" style={{ flex: 1 }} onClick={checkAll}>一括</button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => checkClosing("20日締め")}>20日締め</button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => checkClosing("月末締め")}>月末締め</button>
+                <button className="btn" style={{ flex: 1 }} onClick={() => setCheckedIds(new Set())}>解除</button>
               </div>
 
               <div className="eventList">
