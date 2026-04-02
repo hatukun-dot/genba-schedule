@@ -76,6 +76,17 @@ export function BillingModal({
     });
   }
 
+  // 請求先名（変更後）と現場名（変更前）を結合して表示
+  function getDisplayName(target) {
+    const linked = target.projectId
+      ? (projects || []).find((p) => p.id === target.projectId)
+      : null;
+    const projectName = linked?.name ?? null;
+    return projectName && projectName !== target.name
+      ? `${target.name}（${projectName}）`
+      : target.name;
+  }
+
   // ===== 設定タブ =====
   const settingsTarget = parents.find((t) => t.id === settingsTargetId) ?? null;
 
@@ -247,7 +258,7 @@ export function BillingModal({
                           {children.map((c) => (
                             <div key={c.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.03)" }}>
                               <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>
-                                {c.name}
+                                {getDisplayName(c)}
                               </div>
                               {editingNameId === c.id ? (
                                 <input
@@ -466,7 +477,7 @@ export function BillingModal({
                               });
                             }}
                           />
-                          <span style={{ flex: 1 }}>{t.name}</span>
+                          <span style={{ flex: 1 }}>{getDisplayName(t)}</span>
                           {isExistingChild && (
                             <span style={{ fontSize: 11, color: "rgba(0,0,0,.45)" }}>グループ中</span>
                           )}
