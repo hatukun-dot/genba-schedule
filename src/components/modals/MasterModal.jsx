@@ -42,12 +42,15 @@ export function MasterModal({
   masterEditAnchorRef,
 }) {
   
+  const hasOpenedRef = React.useRef(false);
+
   useLayoutEffect(() => {
     const viewport = document.querySelector('meta[name="viewport"]');
     if (!viewport) return;
     if (open) {
+      hasOpenedRef.current = true;
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-    } else {
+    } else if (hasOpenedRef.current) {
       const fitScale = +(window.innerWidth / 1500).toFixed(4);
       viewport.setAttribute('content', `width=1500, initial-scale=${fitScale}`);
       requestAnimationFrame(() => {
