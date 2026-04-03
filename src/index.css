@@ -27,7 +27,7 @@ input, select { font: inherit; }
 
 .app {
   /* PC でカレンダーを横に広く見せる */
-  max-width: 1500px;
+  max-width: 1440px;
   margin: 0 auto;
   padding: 24px 16px 80px;
 }
