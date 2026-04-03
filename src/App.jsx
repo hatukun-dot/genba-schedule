@@ -208,6 +208,7 @@ function AppInner() {
     // ★キャンセル＝入力保持（フォームは触らない）
     setIsMultiAddOpen(false);
     setCopySourceEvent(null);
+    window.scrollTo(0, window.scrollY);
   }
 
   function ymdInMultiMonth(ymd) {
@@ -323,6 +324,7 @@ function AppInner() {
   function closeMoveModal() {
     setIsMoveOpen(false);
     setMoveEventId(null);
+    window.scrollTo(0, window.scrollY);
   }
 
   async function moveEventToYmdInstant(ymd) {
@@ -1087,6 +1089,7 @@ function AppInner() {
     setIsDayOpen(false);
     setSelectedKey(null);
     resetForm();
+    window.scrollTo(0, window.scrollY);
   }
 
   function openDay(key, opts = {}) {
@@ -1405,6 +1408,7 @@ function AppInner() {
     setIsWeekOpen(false);
     setWeekStartYmd(null);
     closeMenu();
+    window.scrollTo(0, window.scrollY);
   }
   function closeWeekToMonth() {
     if (weekStartYmd) {
@@ -1448,6 +1452,7 @@ function AppInner() {
     setNewTaskName("");
     setNewPersonName("");
     closeMenu();
+    window.scrollTo(0, window.scrollY);
   }
   function startEdit(kind, row) {
     setEditKind(kind);
