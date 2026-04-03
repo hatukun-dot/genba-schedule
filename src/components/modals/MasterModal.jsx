@@ -51,10 +51,10 @@ export function MasterModal({
       hasOpenedRef.current = true;
       viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     } else if (hasOpenedRef.current) {
-      const fitScale = +(window.innerWidth / 1500).toFixed(4);
-      viewport.setAttribute('content', `width=1500, initial-scale=${fitScale}`);
+      const fitScale = +(window.innerWidth / 1440).toFixed(4);
+      viewport.setAttribute('content', `width=1440, initial-scale=${fitScale}`);
       requestAnimationFrame(() => {
-        viewport.setAttribute('content', 'width=1500');
+        viewport.setAttribute('content', 'width=1440');
       });
     }
   }, [open]);
