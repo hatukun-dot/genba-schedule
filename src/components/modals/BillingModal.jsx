@@ -210,7 +210,7 @@ export function BillingModal({
                   return (
                     <div key={t.id}>
                       {/* 親行 */}
-                      <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 8px" }}>
                         <input
                           type="checkbox"
                           checked={checkedIds.has(t.id)}
@@ -243,7 +243,7 @@ export function BillingModal({
                         )}
                         <button
                           className="btn"
-                          style={{ flexShrink: 0, fontSize: 12, padding: "6px 10px" }}
+                          style={{ flexShrink: 0, fontSize: 11, padding: "4px 6px" }}
                           onClick={() => { setEditingNameId(t.id); setEditingNameVal(t.name); }}
                         >
                           名称変更
@@ -283,7 +283,7 @@ export function BillingModal({
                               ) : (
                                 <button
                                   className="btn"
-                                  style={{ flexShrink: 0, fontSize: 12, padding: "4px 8px" }}
+                                  style={{ flexShrink: 0, fontSize: 11, padding: "4px 6px" }}
                                   onClick={() => { setEditingNameId(c.id); setEditingNameVal(c.name); }}
                                 >
                                   名称変更
