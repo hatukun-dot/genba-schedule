@@ -34,7 +34,12 @@ export function AttachmentViewer({ files, initialIndex, onClose }) {
   if (!files || files.length === 0 || !current) return null;
 
   return (
-    <div className="viewerOverlay" onClick={onClose}>
+    <div
+      className="viewerOverlay"
+      onClick={onClose}
+      onTouchStart={(e) => e.stopPropagation()}
+      onTouchEnd={(e) => e.stopPropagation()}
+    >
       <div
         className="viewerContent"
         onClick={(e) => e.stopPropagation()}

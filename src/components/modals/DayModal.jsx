@@ -485,7 +485,7 @@ function AttachmentField({ editingAttachments, pendingFiles, onAddFiles, onRemov
           onClick={() => inputRef.current?.click()}
         >
           <span>ドロップ または タップして追加</span>
-          <span className="dropZoneSub">画像・PDF（残り{5 - totalCount}件）</span>
+          <span className="dropZoneSub">画像・PDF・複数選択OK（残り{5 - totalCount}件）</span>
           <input
             ref={inputRef}
             type="file"
