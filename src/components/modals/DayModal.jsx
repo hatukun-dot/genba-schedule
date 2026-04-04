@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { clamp, fromYmd, mondayOfYmd } from "../../utils/date";
 import { norm, uniqNumArray } from "../../utils/id";
 
@@ -57,6 +57,14 @@ export function DayModal({
   setSelectedManagerId,
   managerInput,
   setManagerInput,
+  // 添付ファイル
+  attachmentsByEventId,
+  editingAttachments,
+  pendingFiles,
+  onAddFiles,
+  onRemovePending,
+  onRemoveExisting,
+  onOpenViewer,
 }) {
 
   const hasOpenedRef = React.useRef(false);
@@ -124,6 +132,15 @@ export function DayModal({
                       {eventLabel(e)}
                     </div>
                     <div className="eventSub">{peopleLine(e)}</div>
+
+                    {(attachmentsByEventId[e.id] || []).length > 0 && (
+                      <button
+                        className="attachBtn"
+                        onClick={(ev) => { ev.stopPropagation(); onOpenViewer(attachmentsByEventId[e.id], 0); }}
+                      >
+                        📎 添付({(attachmentsByEventId[e.id] || []).length})
+                      </button>
+                    )}
 
                     <div className="eventActions">
                       <button className="dots" onClick={(ev) => (ev.stopPropagation(), toggleMenu(mk))}>
@@ -271,6 +288,18 @@ export function DayModal({
             </div>
 
             <div className="field">
+              <div className="label">ファイル（最大5件）</div>
+              <AttachmentField
+                editingAttachments={editingAttachments}
+                pendingFiles={pendingFiles}
+                onAddFiles={onAddFiles}
+                onRemovePending={onRemovePending}
+                onRemoveExisting={onRemoveExisting}
+                onOpenViewer={onOpenViewer}
+              />
+            </div>
+
+            <div className="field">
               <div className="label">予定の色（任意）</div>
               <div className="colorGrid">
                 {COLOR_PALETTE.map((c) => {
@@ -375,5 +404,98 @@ function ManagerInput({ managersActiveSorted, selectedManagerId, setSelectedMana
         </button>
       )}
     </>
+  );
+}
+
+function AttachmentField({ editingAttachments, pendingFiles, onAddFiles, onRemovePending, onRemoveExisting, onOpenViewer }) {
+  const inputRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const existing = editingAttachments || [];
+  const pending = pendingFiles || [];
+  const totalCount = existing.length + pending.length;
+  const canAdd = totalCount < 5;
+
+  function processFiles(files) {
+    const valid = Array.from(files).filter(
+      (f) => f.type.startsWith("image/") || f.type === "application/pdf"
+    );
+    if (valid.length > 0) onAddFiles(valid);
+  }
+
+  function handleDrop(e) {
+    e.preventDefault();
+    setDragging(false);
+    processFiles(e.dataTransfer.files);
+  }
+
+  const allItems = [
+    ...existing.map((a) => ({ kind: "existing", data: a })),
+    ...pending.map((pf, i) => ({ kind: "pending", data: pf, index: i })),
+  ];
+
+  return (
+    <div>
+      {allItems.length > 0 && (
+        <div className="thumbGrid">
+          {allItems.map((item, idx) => (
+            <div key={idx} className="thumbItem">
+              {item.kind === "existing" ? (
+                item.data.fileType === "image" ? (
+                  <img
+                    src={item.data.url}
+                    alt={item.data.fileName}
+                    className="thumbImg"
+                    onClick={() => onOpenViewer(existing, existing.indexOf(item.data))}
+                  />
+                ) : (
+                  <div className="thumbPdf" onClick={() => onOpenViewer(existing, existing.indexOf(item.data))}>
+                    <span className="thumbPdfIcon">📄</span>
+                    <span className="thumbPdfName">{item.data.fileName}</span>
+                  </div>
+                )
+              ) : (
+                item.data.fileType === "image" ? (
+                  <img src={item.data.previewUrl} alt={item.data.fileName} className="thumbImg" />
+                ) : (
+                  <div className="thumbPdf">
+                    <span className="thumbPdfIcon">📄</span>
+                    <span className="thumbPdfName">{item.data.fileName}</span>
+                  </div>
+                )
+              )}
+              <button
+                type="button"
+                className="thumbRemove"
+                onClick={() => item.kind === "existing" ? onRemoveExisting(item.data.id) : onRemovePending(item.index)}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canAdd && (
+        <div
+          className={`dropZone${dragging ? " dragging" : ""}`}
+          onDrop={handleDrop}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onClick={() => inputRef.current?.click()}
+        >
+          <span>ドロップ または タップして追加</span>
+          <span className="dropZoneSub">画像・PDF（残り{5 - totalCount}件）</span>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*,application/pdf"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => { processFiles(e.target.files); e.target.value = ""; }}
+          />
+        </div>
+      )}
+    </div>
   );
 }

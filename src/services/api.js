@@ -140,3 +140,41 @@ export async function updateBillingTarget({ id, patch }) {
 export async function softDeleteBillingTargetById({ id, nowIso }) {
   return await supabase.from("billing_targets").update({ deleted_at: nowIso }).eq("id", id);
 }
+
+// ========== Attachments ==========
+export async function fetchAttachmentsForEvents(eventIds) {
+  if (!eventIds || eventIds.length === 0) return { data: [], error: null };
+  return await supabase
+    .from("event_attachments")
+    .select("*")
+    .in("event_id", eventIds)
+    .order("created_at", { ascending: true });
+}
+
+export async function insertAttachment(row) {
+  return await supabase.from("event_attachments").insert([row]).select("*").single();
+}
+
+export async function deleteAttachmentById(id) {
+  return await supabase.from("event_attachments").delete().eq("id", id);
+}
+
+export async function deleteAttachmentsByEventId(eventId) {
+  return await supabase.from("event_attachments").delete().eq("event_id", eventId);
+}
+
+export async function uploadFile(file, path) {
+  return await supabase.storage.from("event-attachments").upload(path, file, {
+    cacheControl: "3600",
+    upsert: false,
+  });
+}
+
+export async function deleteStorageFile(path) {
+  return await supabase.storage.from("event-attachments").remove([path]);
+}
+
+export function getFilePublicUrl(path) {
+  const { data } = supabase.storage.from("event-attachments").getPublicUrl(path);
+  return data.publicUrl;
+}

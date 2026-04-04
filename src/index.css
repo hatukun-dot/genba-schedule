@@ -605,3 +605,209 @@ input, select { font: inherit; }
   color: #b00020;
   font-weight: bold;
 }
+
+/* ========== 添付ファイル ========== */
+
+/* 予定カードの📎ボタン */
+.attachBtn {
+  margin-top: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+/* ドロップゾーン */
+.dropZone {
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  padding: 18px 12px;
+  text-align: center;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  background: rgba(0,0,0,.02);
+  transition: border-color .15s, background .15s;
+}
+.dropZone.dragging {
+  border-color: #111;
+  background: rgba(0,0,0,.04);
+}
+.dropZoneSub {
+  font-size: 12px;
+}
+
+/* サムネイルグリッド */
+.thumbGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.thumbItem {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: rgba(0,0,0,.04);
+  cursor: pointer;
+}
+.thumbImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.thumbPdf {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px;
+}
+.thumbPdfIcon { font-size: 22px; }
+.thumbPdfName {
+  font-size: 9px;
+  color: var(--muted);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+.thumbRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(0,0,0,.55);
+  color: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+/* ========== ビューア ========== */
+.viewerOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.88);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewerContent {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewerImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.viewerClose {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10001;
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  border-radius: 999px;
+  width: 36px;
+  height: 36px;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewerNav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,.15);
+  border: none;
+  color: #fff;
+  border-radius: 999px;
+  width: 44px;
+  height: 44px;
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.viewerPrev { left: 12px; }
+.viewerNext { right: 12px; }
+.viewerBottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px 24px;
+  background: linear-gradient(0deg, rgba(0,0,0,.6), transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.viewerFileName {
+  color: rgba(255,255,255,.85);
+  font-size: 13px;
+  text-align: center;
+}
+.viewerDots {
+  display: flex;
+  gap: 6px;
+}
+.viewerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.4);
+  cursor: pointer;
+}
+.viewerDot.active {
+  background: #fff;
+}
+.viewerPdfArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: #fff;
+}
+.viewerPdfIcon { font-size: 64px; }
+.viewerPdfName {
+  font-size: 16px;
+  text-align: center;
+  max-width: 300px;
+  word-break: break-all;
+}

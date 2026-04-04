@@ -77,6 +77,18 @@ export function normalizeManagerRow(r) {
   };
 }
 
+export function normalizeAttachmentRow(r) {
+  return {
+    id: toIntOrNull(r.id),
+    eventId: toIntOrNull(r.event_id ?? r.eventId ?? null),
+    fileName: r.file_name ?? r.fileName ?? "",
+    storagePath: r.storage_path ?? r.storagePath ?? "",
+    fileType: r.file_type ?? r.fileType ?? "image",
+    url: r.url ?? null,
+    createdAt: r.created_at ?? r.createdAt ?? null,
+  };
+}
+
 export function normalizeBillingTargetRow(r) {
   return {
     ...r,

@@ -7,12 +7,13 @@ import { BillingModal } from "./components/modals/BillingModal";
 import { DayModal } from "./components/modals/DayModal";
 import { MoveModal } from "./components/modals/MoveModal";
 import { MultiAddModal } from "./components/modals/MultiAddModal";
+import { AttachmentViewer } from "./components/modals/AttachmentViewer";
 import { MonthHeader } from "./components/month/MonthHeader";
 import { MonthGrid } from "./components/month/MonthGrid";
 import { addDaysYmd, buildMonthGrid, clamp, fromYmd, mondayOfYmd, sameDay, toYmd, ymdToMonthLabel, padMonthForFile } from "./utils/date";
 import { norm, toIntOrNull, uniqNumArray } from "./utils/id";
 import { uniqueSheetName } from "./utils/excel";
-import { normalizeEventRow, normalizeBillingTargetRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount, fromDbPeopleCount } from "./utils/normalize";
+import { normalizeEventRow, normalizeAttachmentRow, normalizeBillingTargetRow, normalizeManagerRow, normalizePeopleRow, normalizeProjectRow, normalizeTaskRow, toDbPeopleCount, fromDbPeopleCount } from "./utils/normalize";
 import * as api from "./services/api";
 import { isHolidayDate } from "./utils/holiday";
 
@@ -167,6 +168,15 @@ function AppInner() {
   const [editingEventId, setEditingEventId] = useState(null);
   const [selectedManagerId, setSelectedManagerId] = useState(null);
   const [managerInput, setManagerInput] = useState("");
+
+  // --- 添付ファイル ---
+  const [attachmentsByEventId, setAttachmentsByEventId] = useState({});
+  const [editingAttachments, setEditingAttachments] = useState([]);
+  const [pendingFiles, setPendingFiles] = useState([]);
+  const [removingAttachmentIds, setRemovingAttachmentIds] = useState(new Set());
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerFiles, setViewerFiles] = useState([]);
+  const [viewerInitIndex, setViewerInitIndex] = useState(0);
 
   // --- 複数日に追加（モーダル） ---
   const [isMultiAddOpen, setIsMultiAddOpen] = useState(false);
@@ -1081,8 +1091,102 @@ function AppInner() {
     setEditingEventId(null);
     setSelectedManagerId(null);
     setManagerInput("");
+    setEditingAttachments([]);
+    setPendingFiles((prev) => { prev.forEach((pf) => { if (pf.previewUrl) URL.revokeObjectURL(pf.previewUrl); }); return []; });
+    setRemovingAttachmentIds(new Set());
     closeMenu();
     dayBodyRef.current?.scrollTo?.({ top: 0, behavior: "smooth" });
+  }
+
+  // 日付モーダルが開いているときに選択日の予定の添付ファイルをまとめて取得
+  useEffect(() => {
+    if (!isDayOpen || selectedEvents.length === 0) return;
+    const ids = selectedEvents.map((e) => e.id).filter(Boolean);
+    if (ids.length === 0) return;
+    api.fetchAttachmentsForEvents(ids).then(({ data, error }) => {
+      if (error) return;
+      const rows = (data || []).map((r) => ({
+        ...normalizeAttachmentRow(r),
+        url: api.getFilePublicUrl(r.storage_path),
+      }));
+      const map = {};
+      for (const a of rows) {
+        if (!map[a.eventId]) map[a.eventId] = [];
+        map[a.eventId].push(a);
+      }
+      setAttachmentsByEventId((prev) => ({ ...prev, ...map }));
+    });
+  }, [isDayOpen, selectedEvents]);
+
+  function handleAddFiles(files) {
+    const slotsLeft = 5 - editingAttachments.length - pendingFiles.length;
+    const accepted = Array.from(files).slice(0, slotsLeft);
+    const newPending = accepted.map((file) => ({
+      file,
+      previewUrl: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
+      fileType: file.type === "application/pdf" ? "pdf" : "image",
+      fileName: file.name,
+    }));
+    setPendingFiles((prev) => [...prev, ...newPending]);
+  }
+
+  function handleRemovePending(index) {
+    setPendingFiles((prev) => {
+      const url = prev[index]?.previewUrl;
+      if (url) URL.revokeObjectURL(url);
+      return prev.filter((_, i) => i !== index);
+    });
+  }
+
+  function handleRemoveExisting(id) {
+    setRemovingAttachmentIds((prev) => new Set([...prev, id]));
+    setEditingAttachments((prev) => prev.filter((a) => a.id !== id));
+  }
+
+  function openViewer(attachments, index) {
+    setViewerFiles(attachments);
+    setViewerInitIndex(index);
+    setViewerOpen(true);
+  }
+
+  async function uploadPendingFiles(eventId) {
+    const uploaded = [];
+    for (const pf of pendingFiles) {
+      const ext = pf.file.name.split(".").pop() || "bin";
+      const path = `${eventId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: upErr } = await api.uploadFile(pf.file, path);
+      if (upErr) { console.error("upload error", upErr); continue; }
+      const url = api.getFilePublicUrl(path);
+      const { data: attData, error: attErr } = await api.insertAttachment({
+        event_id: eventId,
+        file_name: pf.file.name,
+        storage_path: path,
+        file_type: pf.fileType,
+      });
+      if (attErr) { console.error("insert attachment error", attErr); continue; }
+      if (attData) uploaded.push({ ...normalizeAttachmentRow(attData), url });
+    }
+    if (uploaded.length > 0) {
+      setAttachmentsByEventId((prev) => ({
+        ...prev,
+        [eventId]: [...(prev[eventId] || []), ...uploaded],
+      }));
+    }
+  }
+
+  async function deleteRemovingAttachments() {
+    for (const id of removingAttachmentIds) {
+      const att = editingAttachments.find((a) => a.id === id) || Object.values(attachmentsByEventId).flat().find((a) => a.id === id);
+      if (att) await api.deleteStorageFile(att.storagePath);
+      await api.deleteAttachmentById(id);
+    }
+    setAttachmentsByEventId((prev) => {
+      const updated = {};
+      for (const [eid, atts] of Object.entries(prev)) {
+        updated[eid] = atts.filter((a) => !removingAttachmentIds.has(a.id));
+      }
+      return updated;
+    });
   }
 
   function closeDay() {
@@ -1162,6 +1266,7 @@ function AppInner() {
           const list = [...(prev[key] || []), newEvent].sort(stableEventSort);
           return { ...prev, [key]: list };
         });
+        if (pendingFiles.length > 0) await uploadPendingFiles(newEvent.id);
       } else {
         setReloadTick((x) => x + 1);
       }
@@ -1290,6 +1395,9 @@ function AppInner() {
         return;
       }
 
+      if (removingAttachmentIds.size > 0) await deleteRemovingAttachments();
+      if (pendingFiles.length > 0) await uploadPendingFiles(editingEventId);
+
       // 楽観的更新：localのstateを直接更新
       setEventsByKey((prev) => {
         const updated = {};
@@ -1378,6 +1486,9 @@ function AppInner() {
     setPeopleCountManual(true);
     setColor(e.color ?? null);
     setSelectedManagerId(e.managerId ?? null);
+    setEditingAttachments(attachmentsByEventId[e.id] || []);
+    setPendingFiles([]);
+    setRemovingAttachmentIds(new Set());
 
     closeMenu();
     setTimeout(() => {
@@ -2293,6 +2404,13 @@ function AppInner() {
         setMultiMode("multi");
         setIsMultiAddOpen(true); // 複数日選択モーダルを開く
         }}
+        attachmentsByEventId={attachmentsByEventId}
+        editingAttachments={editingAttachments}
+        pendingFiles={pendingFiles}
+        onAddFiles={handleAddFiles}
+        onRemovePending={handleRemovePending}
+        onRemoveExisting={handleRemoveExisting}
+        onOpenViewer={openViewer}
       />
 
       <MoveModal
@@ -2343,6 +2461,13 @@ function AppInner() {
         addEventToMultipleDays={addEventToMultipleDays}
         onSurfaceClick={onSurfaceClick}
       />
+      {viewerOpen && viewerFiles.length > 0 && (
+        <AttachmentViewer
+          files={viewerFiles}
+          initialIndex={viewerInitIndex}
+          onClose={() => setViewerOpen(false)}
+        />
+      )}
     </div>
   );
 }
