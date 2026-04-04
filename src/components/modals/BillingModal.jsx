@@ -187,11 +187,11 @@ export function BillingModal({
           {/* ===== 請求先タブ ===== */}
           {tab === "list" && (
             <>
-              <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
-                <button className="btn" style={{ flex: 1, fontSize: 13, padding: "7px 4px" }} onClick={checkAll}>一括</button>
-                <button className="btn" style={{ flex: 1, fontSize: 13, padding: "7px 4px" }} onClick={() => checkClosing("20日締め")}>20日締め</button>
-                <button className="btn" style={{ flex: 1, fontSize: 13, padding: "7px 4px" }} onClick={() => checkClosing("月末締め")}>月末締め</button>
-                <button className="btn" style={{ flex: 1, fontSize: 13, padding: "7px 4px" }} onClick={() => setCheckedIds(new Set())}>解除</button>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 4, marginBottom: 12 }}>
+                <button className="btn" style={{ fontSize: 13, padding: "7px 4px", minWidth: 0 }} onClick={checkAll}>一括</button>
+                <button className="btn" style={{ fontSize: 13, padding: "7px 4px", minWidth: 0 }} onClick={() => checkClosing("20日締め")}>20日締め</button>
+                <button className="btn" style={{ fontSize: 13, padding: "7px 4px", minWidth: 0 }} onClick={() => checkClosing("月末締め")}>月末締め</button>
+                <button className="btn" style={{ fontSize: 13, padding: "7px 4px", minWidth: 0 }} onClick={() => setCheckedIds(new Set())}>解除</button>
               </div>
 
               <div className="eventList">
