@@ -210,7 +210,7 @@ export function BillingModal({
                   return (
                     <div key={t.id}>
                       {/* 親行 */}
-                      <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 8px" }}>
+                      <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 8px", overflow: "hidden" }}>
                         <input
                           type="checkbox"
                           checked={checkedIds.has(t.id)}
@@ -263,7 +263,7 @@ export function BillingModal({
                       {hasChildren && isExpanded && (
                         <div style={{ marginLeft: 24, marginTop: 4, display: "grid", gap: 4 }}>
                           {children.map((c) => (
-                            <div key={c.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.03)" }}>
+                            <div key={c.id} className="eventRow" style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(0,0,0,.03)", overflow: "hidden" }}>
                               <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>
                                 {getDisplayName(c)}
                               </div>
