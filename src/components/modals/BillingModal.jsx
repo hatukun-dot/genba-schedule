@@ -208,7 +208,7 @@ export function BillingModal({
                     : t.name;
 
                   return (
-                    <div key={t.id}>
+                    <div key={t.id} style={{ minWidth: 0 }}>
                       {/* 親行 */}
                       <div className="eventRow" style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 8px", overflow: "hidden" }}>
                         <input
