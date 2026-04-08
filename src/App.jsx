@@ -978,8 +978,8 @@ function AppInner() {
       if (dx < 0) goNextDay();
       else goPrevDay();
     } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
-      // 月画面：しきい値150pxで誤爆防止
-      if (Math.abs(dx) < 150) return;
+      // 月画面：しきい値100pxで誤爆防止
+      if (Math.abs(dx) < 100) return;
 
       // ズーム中はカレンダー端の可視状態で方向を制限
       const scale = window.visualViewport?.scale ?? 1;
