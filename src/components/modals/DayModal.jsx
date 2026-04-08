@@ -25,6 +25,7 @@ export function DayModal({
   COLOR_PALETTE,
   color,
   dayBodyRef,
+  dayNoteFieldRef,
   // handlers / setters
   onSurfaceClick,
   toggleMenu,
@@ -213,7 +214,7 @@ export function DayModal({
               </div>
             </div>
 
-            <div className="field">
+            <div className="field" ref={dayNoteFieldRef}>
               <div className="label">メモ（任意）</div>
               <input className="input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：時間 / 住所など" />
             </div>

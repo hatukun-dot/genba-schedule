@@ -125,6 +125,7 @@ function AppInner() {
   const [isDayOpen, setIsDayOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState(null); // ymd or "TBD"
   const dayBodyRef = useRef(null);
+  const dayNoteFieldRef = useRef(null);
 
   const [isWeekOpen, setIsWeekOpen] = useState(false);
   const [weekStartYmd, setWeekStartYmd] = useState(null);
@@ -824,7 +825,6 @@ function AppInner() {
   function monthPeopleSummary(e) {
     // 1. 名前リストを作成
     const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
-    if (names.length === 0) return "";
 
     // 2. IDではなく名前で判定（IDはDB依存でずれるため）
     const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
@@ -832,9 +832,18 @@ function AppInner() {
 
     // 3. 判定ロジック
     if (isSpecial) {
-      // 休み・応援なら何人でも全員表示
-      return ` ${names.join("、")}`;
+      if (names.length > 0) {
+        // 休み・応援なら何人でも全員表示
+        return ` ${names.join("、")}`;
+      }
+      // 人員が設定されていない場合は人数を表示
+      if (e.peopleCount != null && e.peopleCount > 0) {
+        return ` ${e.peopleCount}名`;
+      }
+      return "";
     }
+
+    if (names.length === 0) return "";
 
     if (names.length <= 2) {
       // 通常現場で2人以下なら名前
@@ -1492,7 +1501,11 @@ function AppInner() {
 
     closeMenu();
     setTimeout(() => {
-      dayBodyRef.current?.scrollTo?.({ top: 999999, behavior: "smooth" });
+      if (dayNoteFieldRef.current?.scrollIntoView) {
+        dayNoteFieldRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        dayBodyRef.current?.scrollTo?.({ top: 999999, behavior: "smooth" });
+      }
     }, 0);
   }
 
@@ -2373,6 +2386,7 @@ function AppInner() {
         COLOR_PALETTE={COLOR_PALETTE}
         color={color}
         dayBodyRef={dayBodyRef}
+        dayNoteFieldRef={dayNoteFieldRef}
         onSurfaceClick={onSurfaceClick}
         toggleMenu={toggleMenu}
         closeMenu={closeMenu}
