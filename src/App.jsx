@@ -952,6 +952,7 @@ function AppInner() {
   // スワイプで月・日を切り替える
   // ============================================================
   const swipeRef = useRef(null);
+  const calendarRef = useRef(null);
 
   function handleTouchStart(e) {
     if (e.touches.length >= 2) {
@@ -979,6 +980,21 @@ function AppInner() {
     } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
       // 月画面：しきい値150pxで誤爆防止
       if (Math.abs(dx) < 150) return;
+
+      // ズーム中はカレンダー端の可視状態で方向を制限
+      const scale = window.visualViewport?.scale ?? 1;
+      if (scale > 1.05 && calendarRef.current) {
+        const rect = calendarRef.current.getBoundingClientRect();
+        const vpWidth = window.visualViewport.width;
+        const tolerance = 30; // px、端列が少し見えていればOK
+        const leftVisible  = rect.left  >= -tolerance; // 月列が見えている
+        const rightVisible = rect.right <= vpWidth + tolerance; // 日列が見えている
+        // 右スワイプ（前月）：月列が見えていないなら無効
+        if (dx > 0 && !leftVisible) return;
+        // 左スワイプ（次月）：日列が見えていないなら無効
+        if (dx < 0 && !rightVisible) return;
+      }
+
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
       else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
     }
@@ -2316,6 +2332,7 @@ function AppInner() {
           weekdayClass={weekdayClass}
           eventLabel={eventLabel}
           monthPeopleSummary={monthPeopleSummary}
+          calendarRef={calendarRef}
         />
       </main>
 

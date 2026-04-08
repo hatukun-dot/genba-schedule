@@ -2,9 +2,9 @@ import React from "react";
 import { TbdRow } from "./TbdRow";
 import { isHolidayDate } from "../../utils/holiday";
 
-export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary }) {
+export function MonthGrid({ weeks, openDay, monthCellEvents, sameDay, todayYmd, weekdayClass, eventLabel, monthPeopleSummary, calendarRef }) {
   return (
-    <section className="calendarCard">
+    <section className="calendarCard" ref={calendarRef}>
       <div className="dowRow">
         {["月", "火", "水", "木", "金", "土", "日"].map((x) => (
           <div key={x} className="dowCell">
