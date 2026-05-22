@@ -838,8 +838,8 @@ function AppInner() {
       return ` ${count}名`;
     }
 
-    // 人数が2人以下（または未設定）：人員（名前）を表示
-    if (names.length === 0) return "";
+    // 人数が2人以下（または未設定）：人員（名前）を表示、名前がなければ人数を表示
+    if (names.length === 0) return count != null && count > 0 ? ` ${count}名` : "";
 
     // 名前の数が人数より少ない場合は人数も併記（例：２人 鈴木）
     if (count != null && count > 0 && names.length < count) {
