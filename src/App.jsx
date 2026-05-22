@@ -948,6 +948,20 @@ function AppInner() {
   // ============================================================
   const swipeRef = useRef(null);
   const calendarRef = useRef(null);
+  const isZoomedRef = useRef(false);
+
+  // visualViewport のズーム状態を常時追跡
+  useEffect(() => {
+    const vp = window.visualViewport;
+    if (!vp) return;
+    const update = () => { isZoomedRef.current = vp.scale > 1.05; };
+    vp.addEventListener("resize", update);
+    vp.addEventListener("scroll", update);
+    return () => {
+      vp.removeEventListener("resize", update);
+      vp.removeEventListener("scroll", update);
+    };
+  }, []);
 
   function handleTouchStart(e) {
     if (e.touches.length >= 2) {
@@ -955,8 +969,7 @@ function AppInner() {
       return;
     }
     // ズーム中はスワイプ開始を記録しない
-    const scale = window.visualViewport?.scale ?? 1;
-    if (scale > 1.05) {
+    if (isZoomedRef.current) {
       swipeRef.current = null;
       return;
     }
@@ -965,6 +978,10 @@ function AppInner() {
 
   function handleTouchEnd(e) {
     if (!swipeRef.current) return;
+    if (isZoomedRef.current) {
+      swipeRef.current = null;
+      return;
+    }
     const dx = e.changedTouches[0].clientX - swipeRef.current.x;
     const dy = e.changedTouches[0].clientY - swipeRef.current.y;
     swipeRef.current = null;
@@ -981,10 +998,6 @@ function AppInner() {
     } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
       // 月画面：しきい値100pxで誤爆防止
       if (Math.abs(dx) < 100) return;
-
-      // ズーム中は月切り替え無効
-      const scale = window.visualViewport?.scale ?? 1;
-      if (scale > 1.05) return;
 
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
       else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
