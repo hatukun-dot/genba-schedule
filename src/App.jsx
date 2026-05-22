@@ -808,10 +808,9 @@ function AppInner() {
 
   function eventLabel(e) {
     const g = genbaNameById(e.projectId);
-    const m = managerNameById(e.managerId);
     const t = taskNameById(e.taskId);
     const n = e.note ? String(e.note).trim() : "";
-    return [g, m, t, n].filter(Boolean).join(" ");
+    return [g, t, n].filter(Boolean).join(" ");
   }
 
   function peopleLine(e) {
@@ -823,35 +822,31 @@ function AppInner() {
   }
 
   function monthPeopleSummary(e) {
-    // 1. 名前リストを作成
     const names = (e.peopleIds || []).map(id => peopleNameById(id)).filter(Boolean);
-
-    // 2. IDではなく名前で判定（IDはDB依存でずれるため）
     const projectName = genbaNameById(e.projectId).replace("（削除済み）", "");
     const isSpecial = projectName === "休み" || projectName === "応援";
 
-    // 3. 判定ロジック
+    // 休み・応援：人員（名前）のみ表示、人数は表示しない
     if (isSpecial) {
-      if (names.length > 0) {
-        // 休み・応援なら何人でも全員表示
-        return ` ${names.join("、")}`;
-      }
-      // 人員が設定されていない場合は人数を表示
-      if (e.peopleCount != null && e.peopleCount > 0) {
-        return ` ${e.peopleCount}名`;
-      }
-      return "";
+      return names.length > 0 ? ` ${names.join("、")}` : "";
     }
 
+    const count = e.peopleCount;
+
+    // 人数が3人以上：人数のみ表示（人員は表示しない）
+    if (count != null && count >= 3) {
+      return ` ${count}名`;
+    }
+
+    // 人数が2人以下（または未設定）：人員（名前）を表示
     if (names.length === 0) return "";
 
-    if (names.length <= 2) {
-      // 通常現場で2人以下なら名前
-      return ` ${names.join("、")}`;
+    // 名前の数が人数より少ない場合は人数も併記（例：２人 鈴木）
+    if (count != null && count > 0 && names.length < count) {
+      return ` ${count}名 ${names.join("、")}`;
     }
 
-    // それ以外（3人以上）は人数
-    return ` ${names.length}名`;
+    return ` ${names.join("、")}`;
   }
 
   function weekdayClass(cell) {
@@ -981,19 +976,9 @@ function AppInner() {
       // 月画面：しきい値100pxで誤爆防止
       if (Math.abs(dx) < 100) return;
 
-      // ズーム中はカレンダー端の可視状態で方向を制限
+      // ズーム中は月切り替え無効
       const scale = window.visualViewport?.scale ?? 1;
-      if (scale > 1.05 && calendarRef.current) {
-        const rect = calendarRef.current.getBoundingClientRect();
-        const vpWidth = window.visualViewport.width;
-        const tolerance = 30; // px、端列が少し見えていればOK
-        const leftVisible  = rect.left  >= -tolerance; // 月列が見えている
-        const rightVisible = rect.right <= vpWidth + tolerance; // 日列が見えている
-        // 右スワイプ（前月）：月列が見えていないなら無効
-        if (dx > 0 && !leftVisible) return;
-        // 左スワイプ（次月）：日列が見えていないなら無効
-        if (dx < 0 && !rightVisible) return;
-      }
+      if (scale > 1.05) return;
 
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
       else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
