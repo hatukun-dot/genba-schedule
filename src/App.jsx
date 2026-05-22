@@ -954,6 +954,12 @@ function AppInner() {
       swipeRef.current = null;
       return;
     }
+    // ズーム中はスワイプ開始を記録しない
+    const scale = window.visualViewport?.scale ?? 1;
+    if (scale > 1.05) {
+      swipeRef.current = null;
+      return;
+    }
     swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }
 
