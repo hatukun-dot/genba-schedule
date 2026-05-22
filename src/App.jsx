@@ -976,20 +976,11 @@ function AppInner() {
       swipeRef.current = null;
       return;
     }
-    // ズーム中はスワイプ開始を記録しない
-    if (checkIsZoomed()) {
-      swipeRef.current = null;
-      return;
-    }
     swipeRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   }
 
   function handleTouchEnd(e) {
     if (!swipeRef.current) return;
-    if (checkIsZoomed()) {
-      swipeRef.current = null;
-      return;
-    }
     const dx = e.changedTouches[0].clientX - swipeRef.current.x;
     const dy = e.changedTouches[0].clientY - swipeRef.current.y;
     swipeRef.current = null;
@@ -1006,6 +997,17 @@ function AppInner() {
     } else if (!isWeekOpen && !isMasterOpen && !isMoveOpen && !isMultiAddOpen) {
       // 月画面：しきい値100pxで誤爆防止
       if (Math.abs(dx) < 100) return;
+
+      // ズーム中はカレンダー端の可視状態で方向を制限
+      if (checkIsZoomed() && calendarRef.current) {
+        const rect = calendarRef.current.getBoundingClientRect();
+        const vpWidth = window.visualViewport?.width ?? window.innerWidth;
+        const tolerance = 30;
+        const leftVisible  = rect.left  >= -tolerance;
+        const rightVisible = rect.right <= vpWidth + tolerance;
+        if (dx > 0 && !leftVisible) return;
+        if (dx < 0 && !rightVisible) return;
+      }
 
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
       else setMonthCursor(new Date(year, monthIndex0 - 1, 1));
