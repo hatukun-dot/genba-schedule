@@ -950,11 +950,13 @@ function AppInner() {
   const calendarRef = useRef(null);
   const isZoomedRef = useRef(false);
 
-  // visualViewport のズーム状態を常時追跡
+  // visualViewport のズーム状態を常時追跡（resize/scrollイベント + 幅比較で確実に検出）
   useEffect(() => {
     const vp = window.visualViewport;
     if (!vp) return;
-    const update = () => { isZoomedRef.current = vp.scale > 1.05; };
+    const update = () => {
+      isZoomedRef.current = vp.scale > 1.05 || vp.width < window.innerWidth - 1;
+    };
     vp.addEventListener("resize", update);
     vp.addEventListener("scroll", update);
     return () => {
@@ -963,13 +965,19 @@ function AppInner() {
     };
   }, []);
 
+  function checkIsZoomed() {
+    const vp = window.visualViewport;
+    if (!vp) return isZoomedRef.current;
+    return isZoomedRef.current || vp.scale > 1.05 || vp.width < window.innerWidth - 1;
+  }
+
   function handleTouchStart(e) {
     if (e.touches.length >= 2) {
       swipeRef.current = null;
       return;
     }
     // ズーム中はスワイプ開始を記録しない
-    if (isZoomedRef.current) {
+    if (checkIsZoomed()) {
       swipeRef.current = null;
       return;
     }
@@ -978,7 +986,7 @@ function AppInner() {
 
   function handleTouchEnd(e) {
     if (!swipeRef.current) return;
-    if (isZoomedRef.current) {
+    if (checkIsZoomed()) {
       swipeRef.current = null;
       return;
     }
