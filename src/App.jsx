@@ -998,15 +998,16 @@ function AppInner() {
       // 月画面：しきい値100pxで誤爆防止
       if (Math.abs(dx) < 100) return;
 
-      // ズーム中はカレンダー端の可視状態で方向を制限
-      if (checkIsZoomed() && calendarRef.current) {
-        const rect = calendarRef.current.getBoundingClientRect();
-        const vpWidth = window.visualViewport?.width ?? window.innerWidth;
-        const tolerance = 30;
-        const leftVisible  = rect.left  >= -tolerance;
-        const rightVisible = rect.right <= vpWidth + tolerance;
-        if (dx > 0 && !leftVisible) return;
-        if (dx < 0 && !rightVisible) return;
+      // ズーム中はビューポートが端にある場合のみ月切り替えを許可
+      if (checkIsZoomed()) {
+        const vp = window.visualViewport;
+        if (vp) {
+          const tolerance = 5;
+          const atLeftEdge  = vp.offsetLeft <= tolerance;
+          const atRightEdge = vp.offsetLeft + vp.width >= window.innerWidth - tolerance;
+          if (dx > 0 && !atLeftEdge)  return; // 右スワイプ（前月）：左端でなければ無効
+          if (dx < 0 && !atRightEdge) return; // 左スワイプ（次月）：右端でなければ無効
+        }
       }
 
       if (dx < 0) setMonthCursor(new Date(year, monthIndex0 + 1, 1));
