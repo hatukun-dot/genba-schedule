@@ -813,6 +813,14 @@ function AppInner() {
     return [g, t, n].filter(Boolean).join(" ");
   }
 
+  function dayEventLabel(e) {
+    const g = genbaNameById(e.projectId);
+    const m = managerNameById(e.managerId);
+    const t = taskNameById(e.taskId);
+    const n = e.note ? String(e.note).trim() : "";
+    return [g, m, t, n].filter(Boolean).join(" ");
+  }
+
   function peopleLine(e) {
     const names = (e.peopleIds || []).map((id) => peopleNameById(id)).filter(Boolean) || [];
     const count = e.peopleCount;
@@ -2426,7 +2434,7 @@ function AppInner() {
         closeDay={closeDay}
         goPrevDay={goPrevDay}
         goNextDay={goNextDay}
-        eventLabel={eventLabel}
+        eventLabel={dayEventLabel}
         peopleLine={peopleLine}
         beginEditEvent={beginEditEvent}
         openMoveModal={openMoveModal}
